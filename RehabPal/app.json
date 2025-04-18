@@ -16,12 +16,12 @@
         "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to use your camera",
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use your microphone"
       },
-      "googleServicesFile": "./ios/GoogleService-Info.plist",
+      "googleServicesFile": "./GoogleService-Info.plist",
       "bundleIdentifier": "com.sophian3105.RehabPal"
     },
   
     "android": {
-      "googleServicesFile": "./android/google-services.json",
+      "googleServicesFile": "./google-services.json",
       "package": "com.sophian3105.RehabPal",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
