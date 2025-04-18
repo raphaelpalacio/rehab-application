@@ -12,6 +12,8 @@ export default function Login() {
     const handleLogin = async () => {
         try {
             const userCredential = await auth().signInWithEmailAndPassword(email, password);
+            const idToken = await userCredential.user.getIdToken();
+            console.log('User Token:', idToken);
         } catch(error) {
             console.log(error);
         }
