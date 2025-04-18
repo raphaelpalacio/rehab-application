@@ -19,6 +19,12 @@ export default function LandingPage() {
             <Text style={styles.buttonText}>Sign Up</Text>
           </TouchableOpacity>
         </Link>
+
+        <Link href="/camera" asChild>
+          <TouchableOpacity style={styles.button}>
+            <Text style={styles.buttonText}>Camera</Text>
+          </TouchableOpacity>
+        </Link>
       </View>
     </View>
   );
