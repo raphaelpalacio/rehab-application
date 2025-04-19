@@ -77,17 +77,17 @@ const CameraScreen = () => {
         {isVideo ? (
           <Video
             source={{ uri: uri || '' }}
-            style={{ width: 400, aspectRatio: 1 }}
+            style={styles.mediaPreview}
             useNativeControls
-            resizeMode={ResizeMode.CONTAIN}
+            resizeMode={ResizeMode.COVER}
             shouldPlay
             isLooping
           />
         ) : (
           <Image
             source={{ uri }}
-            contentFit="contain"
-            style={{ width: 400, aspectRatio: 1 }}
+            contentFit="cover"
+            style={styles.mediaPreview}
           />
         )}
         <TouchableOpacity style={styles.button} onPress={() => setUri(null)}>
@@ -155,6 +155,10 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
   },
+  mediaPreview: {
+    flex: 1,
+    width: '100%',
+  },
   buttonContainer: {
     position: 'absolute',
     bottom: 0,
@@ -175,7 +179,8 @@ const styles = StyleSheet.create({
     padding: 15,
     alignItems: 'center',
     borderRadius: 8,
-    marginVertical: 10,
+    marginVertical: 8,
+    
   },
   text: {
     fontSize: 16,

@@ -19,7 +19,6 @@
       "googleServicesFile": "./GoogleService-Info.plist",
       "bundleIdentifier": "com.sophian3105.RehabPal"
     },
-  
     "android": {
       "googleServicesFile": "./google-services.json",
       "package": "com.sophian3105.RehabPal",
@@ -45,6 +44,13 @@
         }
       ],
       [
+        "expo-video",
+        {
+          "supportsBackgroundPlayback": true,
+          "supportsPictureInPicture": true
+        }
+      ],
+      [
         "expo-av",
         {
           "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone."
@@ -59,7 +65,8 @@
         }
       ],
       "@react-native-firebase/app",
-      "@react-native-firebase/auth"
+      "@react-native-firebase/auth",
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true
