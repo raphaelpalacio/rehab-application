@@ -2,7 +2,7 @@ import { CameraView, CameraType, useCameraPermissions, CameraMode } from 'expo-c
 import { useRef, useState } from 'react';
 import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Video } from 'expo-av';
+import { ResizeMode, Video } from 'expo-av';
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
@@ -14,6 +14,7 @@ const CameraScreen = () => {
   const [uri, setUri] = useState<string | null>(null);
   const [mode, setMode] = useState<CameraMode>("picture");
   const [recording, setRecording] = useState(false);
+  
 
   if (!permission) {
     return <View />;
@@ -36,15 +37,28 @@ const CameraScreen = () => {
   };
 
   const recordVideo = async () => {
-    if (recording) {
-      setRecording(false);
-      ref.current?.stopRecording();
-      return;
+    const isVideo = uri?.endsWith(".mp4") || uri?.endsWith(".mov");
+    if (!recording) {
+      setRecording(true);
+      try {
+        const video = await ref.current?.recordAsync();
+        if (video?.uri) {
+          setUri(video.uri);
+        }
+        console.log({ video });
+      } catch (error) {
+        console.error("Recording failed:", error);
+      } finally {
+        setRecording(false); 
+      }
     }
-    setRecording(true);
-    const video = await ref.current?.recordAsync();
-    console.log({ video });
   };
+
+  const stopVideo = async () => {
+    ref.current?.stopRecording();
+    setRecording(false);
+  }
+  
 
   const toggleMode = () => {
     setMode((prev) => (prev === "picture" ? "video" : "picture"));
@@ -54,16 +68,32 @@ const CameraScreen = () => {
     setFacing(current => (current === 'back' ? 'front' : 'back'));
   };
 
+
   const renderPicture = () => {
+    const isVideo = uri?.endsWith(".mp4") || uri?.endsWith(".mov");
+  
     return (
       <View style={styles.container}>
-        <Image
-          source={{ uri }}
-          contentFit="contain"
-          style={{ width: 400, aspectRatio: 1 }}
-        />
+        {isVideo ? (
+          <Video
+            source={{ uri: uri || '' }}
+            style={{ width: 400, aspectRatio: 1 }}
+            useNativeControls
+            resizeMode={ResizeMode.CONTAIN}
+            shouldPlay
+            isLooping
+          />
+        ) : (
+          <Image
+            source={{ uri }}
+            contentFit="contain"
+            style={{ width: 400, aspectRatio: 1 }}
+          />
+        )}
         <TouchableOpacity style={styles.button} onPress={() => setUri(null)}>
-          <Text style={styles.text}>Take another picture</Text>
+          <Text style={styles.text}>
+            {isVideo ? "Record another video" : "Take another picture"}
+          </Text>
         </TouchableOpacity>
       </View>
     );
@@ -91,11 +121,11 @@ const CameraScreen = () => {
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.shutterButton}
-                onPress={mode === "picture" ? takePicture : recordVideo}
+                onPress={mode === "picture" ? takePicture : (recording ? stopVideo : recordVideo)}
               >
                 <View style={[
                   styles.shutterButtonInner,
-                  { backgroundColor: mode === "picture" ? "white" : "red" }
+                  { backgroundColor: mode === "picture" ? "white" : (recording ? "gray" : "red") }
                 ]} />
               </TouchableOpacity>
               <TouchableOpacity onPress={toggleCameraFacing}>
