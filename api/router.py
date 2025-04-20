@@ -9,6 +9,7 @@ from config import minio_client, settings
 router = APIRouter()
 video_router = APIRouter(prefix="/video")
 
+
 class HealthCheckResponse(BaseModel):
     status: str
     message: str
@@ -31,8 +32,12 @@ async def upload_video(file: UploadFile, user: FBUser = Security(verifier)):
     and the file must be of type quicktime (used for mov)
     """
     
-    if file is None or file.content_type != "video/quicktime":
-        raise BadRequestException("File must be of type video/quick")
+    if file is None:
+        raise BadRequestException("No file provided in the request.")
+
+    if file.content_type != "video/quicktime":
+        raise BadRequestException(f"Invalid file type: {file.content_type}. Expected 'video/quicktime'.")
+
 
     minio_client.put_object(
         bucket_name=settings.bucket_name,
