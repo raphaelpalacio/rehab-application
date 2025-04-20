@@ -40,8 +40,7 @@ firebase_app = firebase_admin.initialize_app()
 minio_client = Minio(
     endpoint=settings.minio_endpoint,
     access_key=settings.minio_access_key,
-    secret_key=settings.minio_secret_key,
-    secure=False
+    secret_key=settings.minio_secret_key
 )
 
 # We want to make sure the bucket exists
