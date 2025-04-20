@@ -1,10 +1,6 @@
 from fastapi import FastAPI, Security
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
-from config import env_path
 from router import router
-
-load_dotenv(env_path)
 
 app = FastAPI()
 
