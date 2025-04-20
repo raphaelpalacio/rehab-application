@@ -3,12 +3,11 @@ from fastapi.routing import APIRouter
 from auth import FBUser, verifier
 from pydantic import BaseModel
 from exceptions import BadRequestException
+from config import minio_client, settings
 
 # This will be our main router
 router = APIRouter()
 video_router = APIRouter(prefix="/video")
-
-router.include_router(video_router)
 
 class HealthCheckResponse(BaseModel):
     status: str
@@ -26,7 +25,7 @@ def auth_test(user: FBUser = Security(verifier)):
     return user
     
 @video_router.post("/upload", status_code=200)
-async def upload_video(file: UploadFile | None = None, user: FBUser = Security(verifier)):
+async def upload_video(file: UploadFile, user: FBUser = Security(verifier)):
     """
     This is used to upload a video file so we can store it. Must be sent as a multipart/form-data request
     and the file must be of type quicktime (used for mov)
@@ -35,7 +34,12 @@ async def upload_video(file: UploadFile | None = None, user: FBUser = Security(v
     if file is None or file.content_type != "video/quicktime":
         raise BadRequestException("File must be of type video/quick")
 
-    contents = await file.read()
-    
+    minio_client.put_object(
+        bucket_name=settings.bucket_name,
+        object_name=f"videos/{file.filename}",
+        data=file.file,
+        length=file.size,
+        content_type=file.content_type
+    )
     
     return {"message": "Video uploaded successfully"}
