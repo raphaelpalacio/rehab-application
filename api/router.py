@@ -1,9 +1,10 @@
-from fastapi import Security, UploadFile
+from fastapi import Security, UploadFile, Request, HTTPException
 from fastapi.routing import APIRouter
 from auth import FBUser, verifier
 from pydantic import BaseModel
 from exceptions import BadRequestException
 from config import minio_client, settings
+from firebase_admin import auth as admin_auth
 
 # This will be our main router
 router = APIRouter()
@@ -48,3 +49,25 @@ async def upload_video(file: UploadFile, user: FBUser = Security(verifier)):
     )
     
     return {"message": "Video uploaded successfully"}
+
+
+@router.post("/set-role")
+async def set_user_role(request: Request):
+    """
+    This is used to set the roles so that we can display different frontends.
+    """
+    try:
+        token = request.headers.get("authorization", "").split("Bearer ")[-1]
+        decoded_token = admin_auth.verify_id_token(token)
+        uid = decoded_token["uid"]
+        data = await request.json()
+        role = data.get("role")
+
+        if role not in ["doctor", "patient"]:
+            raise HTTPException(status_code=400, detail="Invalid role")
+
+        admin_auth.set_custom_user_claims(uid, {"role": role})
+        return {"message": f"Role '{role}' set successfully"}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Internal Server Error")
