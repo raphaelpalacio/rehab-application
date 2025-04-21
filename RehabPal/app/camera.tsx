@@ -6,6 +6,9 @@ import { ResizeMode, Video } from 'expo-av';
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
+import Constants from 'expo-constants';
+
+const API_URL = Constants.expoConfig?.extra?.API_URL;
 
 const CameraScreen = () => {
   const [facing, setFacing] = useState<CameraType>('back');
@@ -72,7 +75,7 @@ const CameraScreen = () => {
         type: 'video/quicktime',
       } as any);
 
-      const response = await fetch('${API_URL}/video/upload', {
+      const response = await fetch(`${API_URL}/video/upload`, {
         method: 'POST',
         body: formData,
         headers: {
