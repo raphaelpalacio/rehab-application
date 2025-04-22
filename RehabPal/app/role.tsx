@@ -28,7 +28,6 @@ export default function RolePage() {
       }
 
       const token = await user.getIdToken();
-      console.log('Token:', token);
 
       const response = await fetch(`${API_URL}/set-role`, {
         method: 'POST',
@@ -41,6 +40,9 @@ export default function RolePage() {
 
       if (response.ok) {
         await user.getIdToken(true); 
+        console.log('Refreshed:', token);
+
+
         router.replace(`/${role}`); 
       } else {
         console.error('Role set failed');

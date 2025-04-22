@@ -25,6 +25,14 @@ class EnvironmentSettings(BaseSettings):
     minio_access_key: str
     minio_secret_key: str
     bucket_name: str
+    db_name: str
+    db_user: str
+    db_password: str
+    db_host: str
+    db_port: str
+    db_url: str
+    db_schema: str
+
 
     class Config:
         # We will use dotenv to load the environment variables

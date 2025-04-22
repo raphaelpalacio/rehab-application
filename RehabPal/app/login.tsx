@@ -23,7 +23,6 @@ export default function Login() {
     const retrieveRole = async () => {
         const user = auth().currentUser;
         if (user) {
-            const idToken = await user.getIdToken(true);
             const decodedToken = await user.getIdTokenResult();
             console.log('Claims:', decodedToken.claims);
 
