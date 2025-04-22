@@ -41,8 +41,6 @@ export default function RolePage() {
       if (response.ok) {
         await user.getIdToken(true); 
         console.log('Refreshed:', token);
-
-
         router.replace(`/${role}`); 
       } else {
         console.error('Role set failed');

@@ -2,8 +2,7 @@ import { View, Text, TouchableOpacity, TextInput, Modal, StyleSheet, Alert } fro
 import { Link } from 'expo-router';
 import auth from '@react-native-firebase/auth';
 import Constants from 'expo-constants';
-import React, { useState } from 'react';
-
+import React, { useState, useEffect} from 'react';
 
 
 const API_URL = Constants.expoConfig?.extra?.API_URL;
@@ -11,7 +10,39 @@ const API_URL = Constants.expoConfig?.extra?.API_URL;
 export default function Patient() {
   const [modalVisible, setModalVisible] = useState(false);
   const [connectCode, setConnectCode] = useState('');
+  const [code, setCode] = useState('');
+  
+  const getCode = async () => {
+    const user = auth().currentUser;
+    if (!user) {
+      console.error('No user found. Please log in first.');
+      return;
+    }
+    const token = await user.getIdToken();
 
+    try {
+      const response = await fetch(`${API_URL}/connect-code`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch connect code');
+      }
+
+      const data = await response.json();
+      setCode(data.connect_code);
+    } catch (err) {
+      console.error('Error fetching connect code:', err);
+    }
+  };
+
+  useEffect(() => {
+    getCode();
+  }, []);
   const connectDoctor = async () => {
     try {
       const user = auth().currentUser;
@@ -37,7 +68,7 @@ export default function Patient() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Hello Patient</Text>
-      <Text style={styles.subtitle}>Your personal rehabilitation companion</Text>
+      <Text style={styles.subtitle}>Your connect code is: {code}</Text>
       
       <View style={styles.buttonContainer}>
         <Link href="/login" asChild>

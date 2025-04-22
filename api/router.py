@@ -194,6 +194,35 @@ async def get_connections(request: Request):
 
     return {"connected_to": None}
 
+@router.get("/connect-code")
+async def get_connect_code(request: Request):
+    """
+    This is used to retrieve the connect code.
+    """
+    try:
+        token = request.headers.get("authorization", "").split("Bearer ")[-1]
+        decoded_token = admin_auth.verify_id_token(token)
+        uid = decoded_token["uid"]
+        role = decoded_token.get("role")
+
+        cur = conn.cursor()
+        if role == "doctor":
+            cur.execute("SELECT connect_code FROM doctors WHERE id = %s;", (uid,))
+        elif role == "patient":
+            cur.execute("SELECT connect_code FROM patients WHERE id = %s;", (uid,))
+        else:
+            raise HTTPException(status_code=400, detail="Invalid role")
+
+        result = cur.fetchone()
+        if not result:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        return {"connect_code": result[0]}
+
+    except Exception as e:
+        print("Error in /connect-code:", e)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
 @router.post("/reset-db")
 async def reset_database():
     """
