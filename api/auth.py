@@ -10,19 +10,15 @@ from typing import Literal
 This class contains the contents of a Firebase user
 """
 class FBUser(BaseModel):
-    uid: str
+    uid: str = Field(..., description="The display name of the user", alias="user_id")
     email: str
     email_verified: bool
-    display_name: str = Field(..., description="The display name of the user", alias="name")
-    picture: str
     role: Literal["doctor", "patient"] | None = None
 
 _test_user = FBUser(
-    uid="test-uid",
+    user_id="test-uid",
     email="test-email@gmail.com",
     email_verified=True,
-    name="test-name",
-    picture="https://fastly.picsum.photos/id/371/200/300.jpg?hmac=CZPdOAGtsgzhjapSpcZbjc4cFkTu5gWl9PFxBRY369c",
 )
 
 class VerifyJWT:

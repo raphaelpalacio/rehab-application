@@ -30,7 +30,8 @@ export default function Login() {
             if (role === 'doctor' || role === 'patient') {
                 router.push(`/${role}` as '/doctor' | '/patient');
             } else {
-                console.error('No valid role set');
+                router.push("/role");
+                console.log("Sophia could never be an academic weapon");
             }
         }
     }
