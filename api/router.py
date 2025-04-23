@@ -188,9 +188,9 @@ async def get_connections(request: Request):
         return {"connected_to": doctor_id}
 
     elif role == "doctor":
-        cur.execute("SELECT patients FROM doctors WHERE id = %s;", (uid,))
-        patient_ids = cur.fetchone()[0]
-        return {"connected_to": patient_ids}
+        cur.execute("SELECT id, email FROM patients WHERE doctor_id = %s;", (uid,))
+        patients = [{"id": row[0], "email": row[1]} for row in cur.fetchall()]
+        return {"patients": patients}
 
     return {"connected_to": None}
 

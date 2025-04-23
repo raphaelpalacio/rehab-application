@@ -5,3 +5,4 @@ pydantic-settings
 firebase-admin
 
 minio
+psycopg2-binary

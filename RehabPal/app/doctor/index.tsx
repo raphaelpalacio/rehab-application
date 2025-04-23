@@ -72,9 +72,9 @@ export default function Doctor() {
       <Text style={styles.subtitle}>Your connect code is: {code}</Text>
       
       <View style={styles.buttonContainer}>
-        <Link href="/login" asChild>
+        <Link href="/doctor/patientList" asChild>
           <TouchableOpacity style={styles.button}>
-            <Text style={styles.buttonText}>Login</Text>
+            <Text style={styles.buttonText}>Patient Overview</Text>
           </TouchableOpacity>
         </Link>
 
