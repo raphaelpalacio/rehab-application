@@ -1,25 +1,27 @@
 import psycopg2
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
+import psycopg2.extras
+from config import settings
 
 conn = psycopg2.connect(
-    dbname=os.getenv("DB_NAME"),
-    user=os.getenv("DB_USER"),
-    password=os.getenv("DB_PASSWORD"),
-    host=os.getenv("DB_HOST"),
-    port=os.getenv("DB_PORT")
+    dbname=settings.db_name,
+    user=settings.db_user,
+    password=settings.db_password,
+    host=settings.db_host,
+    port=settings.db_port,
 )
 
-cur = conn.cursor()
+def getDictCursor():
+    return conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
-with open("schema.sql", "r") as f:
-    sql = f.read()
-    cur.execute(sql)
+if __name__ == "__main__":    
+    cur = conn.cursor()
 
-conn.commit()
-cur.close()
-conn.close()
+    with open("schema.sql", "r") as f:
+        sql = f.read()
+        cur.execute(sql)
 
-print("Schema created successfully.")
+        conn.commit()
+        cur.close()
+        conn.close()
+
+    print("Schema created successfully.")

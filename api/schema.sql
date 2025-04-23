@@ -1,21 +1,21 @@
-CREATE TABLE doctors (
-    id TEXT PRIMARY KEY CHECK (length(id) <= 32),
+CREATE TABLE IF NOT EXISTS doctors (
+    id VARCHAR(36) PRIMARY KEY,
     email TEXT,
-    connect_code TEXT UNIQUE,
-    patients TEXT[] DEFAULT '{}'
+    connect_code TEXT UNIQUE
 );
 
-CREATE TABLE patients (
-    id TEXT PRIMARY KEY CHECK (length(id) <= 32),
+CREATE TABLE IF NOT EXISTS patients (
+    id VARCHAR(36) PRIMARY KEY,
     email TEXT,
     connect_code TEXT UNIQUE,
-    doctor_id TEXT
+    doctor_id VARCHAR(36) DEFAULT NULL REFERENCES doctors(id)
 );
 
-CREATE TABLE videos (
+CREATE TABLE IF NOT EXISTS videos (
     id SERIAL PRIMARY KEY,
-    doctor_id TEXT,
-    patient_id TEXT,
-    file_path TEXT,
-    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    doctor_id VARCHAR(36) REFERENCES doctors(id),
+    patient_id VARCHAR(36) REFERENCES patients(id),
+    object_name TEXT NOT NULL,
+    content_type TEXT NOT NULL,
+    uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
