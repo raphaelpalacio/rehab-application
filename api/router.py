@@ -1,4 +1,4 @@
-from fastapi import Security, UploadFile, HTTPException, responses
+from fastapi import Security, UploadFile, HTTPException, responses, File, Form
 from fastapi.routing import APIRouter
 from auth import FBUser, verifier
 from pydantic import BaseModel
@@ -47,8 +47,8 @@ class Video(BaseModel):
 
 @video_router.post("/upload", status_code=201, response_model=Video)
 async def upload_video(
-    file: UploadFile,
-    patient_id: str,
+    file: UploadFile = File(...),
+    patient_id: str = Form(...),
     user: FBUser = Security(verifier)
 ):
     """
@@ -84,7 +84,7 @@ async def upload_video(
             if result is None:
                 raise HTTPException(status_code=500, detail="Failed to insert video record into database")
             
-            video = Video.model_validate(**result)
+            video = Video.model_validate(result)
             conn.commit()
             
             return video

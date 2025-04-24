@@ -2,19 +2,22 @@ import React, { useEffect, useState } from 'react';
 import auth from '@react-native-firebase/auth';
 import Constants from 'expo-constants';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity} from 'react-native';
-import { Link } from 'expo-router';
 import { router } from 'expo-router';
+import { useDispatch } from "react-redux";
+import { setPatientId } from "../../src/patientSlice";
 
 
 
 const API_URL = Constants.expoConfig?.extra?.API_URL;
+
 
 type Patient = {
     id: string;
     email: string;
   };
 
-const DoctorPatients = () => {
+const PatientList = () => {
+    const dispatch = useDispatch();
     const [patients, setPatients] = useState<Patient[]>([]);
     const fetchPatients = async () => {
         const user = auth().currentUser;
@@ -51,16 +54,15 @@ const DoctorPatients = () => {
           <View style={{ paddingVertical: 10 }}>
             <Text style={styles.text}>ID: {item.id}</Text>
             <Text style={styles.text}>Email: {item.email}</Text>
-            <Link href="/camera" asChild>
             <TouchableOpacity
-                style={styles.button}
+                style={styles.button}                
                 onPress={() => {
-                    router.push({ pathname: "/camera", params: { patientId: item.id } });
+                  dispatch(setPatientId(item.id));
+                  router.push("/camera");
                 }}
                 >
                 <Text style={styles.buttonText}>Assign</Text>
             </TouchableOpacity>
-            </Link>
 
           </View>
         )}
@@ -69,7 +71,7 @@ const DoctorPatients = () => {
   );
 };
 
-export default DoctorPatients;
+export default PatientList;
 
 const styles = StyleSheet.create({
 container: {

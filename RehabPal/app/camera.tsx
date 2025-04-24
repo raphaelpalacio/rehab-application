@@ -7,6 +7,10 @@ import AntDesign from "@expo/vector-icons/AntDesign";
 import Feather from "@expo/vector-icons/Feather";
 import FontAwesome6 from "@expo/vector-icons/FontAwesome6";
 import Constants from 'expo-constants';
+import { useSelector, useDispatch } from "react-redux";
+import { RootState } from "../src/store";
+import auth from '@react-native-firebase/auth';
+
 
 const API_URL = Constants.expoConfig?.extra?.API_URL;
 
@@ -17,6 +21,7 @@ const CameraScreen = () => {
   const [uri, setUri] = useState<string | null>(null);
   const [mode, setMode] = useState<CameraMode>("picture");
   const [recording, setRecording] = useState(false);
+  const patientId = useSelector((state: RootState) => state.patient.patientId);
   
 
   if (!permission) {
@@ -34,6 +39,8 @@ const CameraScreen = () => {
 
   const takePicture = async () => {
     const photo = await ref.current?.takePictureAsync();
+    console.log(patientId)
+
     if (photo?.uri) {
       setUri(photo.uri);
     }
@@ -64,22 +71,28 @@ const CameraScreen = () => {
 
   const uploadVideo = async (videoUri: string) => {
     if (!videoUri) return;
+
+    const user = auth().currentUser;
+        if (!user) return;
+        const token = await user.getIdToken();
     
     try {
       const formData = new FormData();
       const fileName = videoUri.split('/').pop();
       
       formData.append('file', {
-        uri,
+        uri: videoUri,
         name: fileName,
         type: 'video/quicktime',
       } as any);
 
+      console.log(patientId)
+      formData.append('patient_id', patientId)
       const response = await fetch(`${API_URL}/video/upload`, {
         method: 'POST',
         body: formData,
         headers: {
-          'Authorization': 'Bearer test',
+          Authorization: `Bearer ${token}`,
         },
       });
 
