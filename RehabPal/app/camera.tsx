@@ -1,4 +1,4 @@
-import { CameraView, CameraType, useCameraPermissions, CameraMode } from 'expo-camera';
+import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions, CameraMode } from 'expo-camera';
 import { useRef, useState } from 'react';
 import { Button, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { Image } from 'expo-image';
@@ -17,22 +17,28 @@ const API_URL = Constants.expoConfig?.extra?.API_URL;
 const CameraScreen = () => {
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
+  const [micPermission, requestMicPermission] = useMicrophonePermissions();
   const ref = useRef<CameraView>(null);
   const [uri, setUri] = useState<string | null>(null);
   const [mode, setMode] = useState<CameraMode>("picture");
   const [recording, setRecording] = useState(false);
   const patientId = useSelector((state: RootState) => state.patient.patientId);
-  
-
-  if (!permission) {
+    
+  if (!permission || !micPermission) {
     return <View />;
   }
 
-  if (!permission.granted) {
+  if (!permission.granted || !micPermission.granted) {
     return (
       <View style={styles.container}>
         <Text style={styles.message}>We need your permission to show the camera</Text>
-        <Button onPress={requestPermission} title="grant permission" />
+        <Button 
+            onPress={() => {
+                if (!permission.granted) requestPermission();
+                if (!micPermission.granted) requestMicPermission();
+            }} 
+            title="grant permission" 
+        />
       </View>
     );
   }
@@ -47,11 +53,12 @@ const CameraScreen = () => {
   };
 
   const recordVideo = async () => {
-    const isVideo = uri?.endsWith(".mp4") || uri?.endsWith(".mov");
     if (!recording) {
       setRecording(true);
       try {
-        const video = await ref.current?.recordAsync();
+        const video = await ref.current?.recordAsync({
+            maxDuration: 30 // Max 30 second duration
+        });
         if (video?.uri) {
           setUri(video.uri);
           await uploadVideo(video.uri);
@@ -79,7 +86,9 @@ const CameraScreen = () => {
     try {
       const formData = new FormData();
       const fileName = videoUri.split('/').pop();
-      
+
+      console.log(videoUri)
+
       formData.append('file', {
         uri: videoUri,
         name: fileName,

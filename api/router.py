@@ -64,7 +64,7 @@ async def upload_video(
 
     res = minio_client.put_object(
         bucket_name=settings.bucket_name,
-        object_name=f"videos/{file.filename}{uuid.uuid4()}",
+        object_name=f"videos/{file.filename}",
         data=file.file,
         length=file.size,
         content_type=file.content_type
