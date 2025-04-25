@@ -25,6 +25,8 @@ export default function Layout() {
         <Stack.Screen name="doctor/index" options={{ headerShown: false }} />
         <Stack.Screen name="patient/index" options={{ headerShown: false }} />
         <Stack.Screen name="doctor/patientList" options={{ headerShown: false }} />
+        <Stack.Screen name="patient/inbox" options={{ headerShown: false }} />
+
       </Stack>
     </Provider>
   );

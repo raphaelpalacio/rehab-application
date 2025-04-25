@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity} from 'react-native'
 import auth from '@react-native-firebase/auth';
 import Constants from 'expo-constants';
 import React, { useState, useEffect} from 'react';
+import { Link } from 'expo-router';
 
 
 const API_URL = Constants.expoConfig?.extra?.API_URL;
@@ -26,12 +27,10 @@ export default function Videos() {
     const token = await user.getIdToken();
 
     try {
-      const response = await fetch(`${API_URL}/video/get_videos`, {
+      const response = await fetch(`${API_URL}/video`, {
         method: 'GET',
         headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+          Authorization: `Bearer ${token}`        },
       });
 
       if (!response.ok) {
@@ -43,6 +42,7 @@ export default function Videos() {
     } catch (err) {
       console.error('Error fetching connect code:', err);
     }
+
   };
   useEffect(() => {
     const fetchData = async () => {
@@ -56,20 +56,22 @@ export default function Videos() {
     <View style={styles.container}>
       <Text style={styles.title}>Videos</Text>
       {videos.map((video, index) => (
-        <Text key={index} style={styles.videoItem}>
-          {video.description || video.object_name}
-        </Text>
+        <Link key={video.id} href="/camera" asChild>
+          <TouchableOpacity>
+            <Text style={styles.videoItem}>
+              {video.description || video.object_name}
+            </Text>
+          </TouchableOpacity>
+        </Link>
       ))}
     </View>
-  );
+  );  
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
+    padding: 5,
     backgroundColor: 'black',
   },
   title: {
@@ -77,6 +79,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 10,
     color: 'white',
+    paddingTop: 70,
+    paddingLeft: 140,
+    justifyContent: 'center',
+    alignContent: 'center'
   },
   input: {
     width: '100%',
@@ -90,8 +96,8 @@ const styles = StyleSheet.create({
   videoItem: {
     fontSize: 16,
     color: 'white',
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
+    borderBottomColor: 'white',
   }
 }); 

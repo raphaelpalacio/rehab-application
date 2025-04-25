@@ -149,6 +149,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'black',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
   },
   message: {
     textAlign: 'center',
