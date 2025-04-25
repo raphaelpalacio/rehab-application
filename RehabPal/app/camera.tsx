@@ -1,6 +1,6 @@
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import { CameraView, CameraType, useCameraPermissions, useMicrophonePermissions, CameraMode } from 'expo-camera';
 import { useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View, Button } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import Constants from 'expo-constants';
 import { useSelector } from "react-redux";
@@ -11,19 +11,27 @@ const API_URL = Constants.expoConfig?.extra?.API_URL;
 
 const CameraScreen = () => {
   const [permission, requestPermission] = useCameraPermissions();
+  const [micPermission, requestMicPermission] = useMicrophonePermissions();
   const ref = useRef<CameraView>(null);
   const [uri, setUri] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const patientId = useSelector((state: RootState) => state.patient.patientId);
+    
+  if (!permission || !micPermission) {
+    return <View />;
+  }
 
-  if (!permission) return <View />;
-  if (!permission.granted) {
+  if (!permission.granted || !micPermission.granted) {
     return (
       <View style={styles.container}>
         <Text style={styles.message}>We need your permission to show the camera</Text>
-        <TouchableOpacity onPress={requestPermission} style={styles.button}>
-          <Text style={styles.text}>Grant Permission</Text>
-        </TouchableOpacity>
+        <Button 
+            onPress={() => {
+                if (!permission.granted) requestPermission();
+                if (!micPermission.granted) requestMicPermission();
+            }} 
+            title="grant permission" 
+        />
       </View>
     );
   }
@@ -32,7 +40,9 @@ const CameraScreen = () => {
     if (!recording) {
       setRecording(true);
       try {
-        const video = await ref.current?.recordAsync();
+        const video = await ref.current?.recordAsync({
+            maxDuration: 30 // Max 30 second duration
+        });
         if (video?.uri) {
           setUri(video.uri);
           await uploadVideo(video.uri);
@@ -59,6 +69,9 @@ const CameraScreen = () => {
     try {
       const formData = new FormData();
       const fileName = videoUri.split('/').pop();
+
+      console.log(videoUri)
+
       formData.append('file', {
         uri: videoUri,
         name: fileName,
