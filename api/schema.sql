@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS videos (
     id SERIAL PRIMARY KEY,
     doctor_id VARCHAR(36) REFERENCES doctors(id),
     patient_id VARCHAR(36) REFERENCES patients(id),
+    title TEXT NOT NULL DEFAULT '',
     object_name TEXT NOT NULL,
     content_type TEXT NOT NULL,
     uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP

@@ -44,11 +44,13 @@ class Video(BaseModel):
     patient_id: str
     object_name: str
     content_type: str
+    title: str
 
 @video_router.post("/upload", status_code=201, response_model=Video)
 async def upload_video(
     file: UploadFile = File(...),
     patient_id: str = Form(...),
+    title: str = Form(...),
     user: FBUser = Security(verifier)
 ):
     """
@@ -76,8 +78,11 @@ async def upload_video(
     try:
         with getDictCursor() as cur:
             cur.execute(
-                "INSERT INTO videos (doctor_id, patient_id, object_name, content_type) VALUES (%s, %s, %s, %s) RETURNING *;",
-                (user.uid, patient_id, res.object_name, file.content_type)
+                """
+                    INSERT INTO videos (doctor_id, patient_id, title, object_name, content_type)
+                    VALUES (%s, %s, %s, %s, %s) RETURNING *;
+                """,
+                (user.uid, patient_id, title, res.object_name, file.content_type)
             )
             
             result = cur.fetchone()
