@@ -95,7 +95,7 @@ async def upload_video(
 
 
 
-@video_router.get("/get_videos", status_code=200, response_model=list[Video])
+@video_router.get('', status_code=200, response_model=list[Video])
 async def get_videos(user: FBUser = Security(verifier, scopes=default_scopes)):
     try:
         with getDictCursor() as cur:
@@ -114,15 +114,18 @@ async def get_videos(user: FBUser = Security(verifier, scopes=default_scopes)):
         logger.error("Error in get_videos: %e", e)
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-@video_router.get("/download/{object_name}", status_code=200)
+@video_router.get("/download/{object_name:path}", status_code=200)
 async def download_video(object_name: str, user: FBUser = Security(verifier, scopes=default_scopes)):
     # First verify the user owns it, then use the row to fetch it
     try:
         with getDictCursor() as cur:
             if user.role == "doctor":
-                cur.execute("SELECT * FROM videos WHERE doctor_id = %s AND id = %s LIMIT 1;", (user.uid, object_name))
+                cur.execute(
+                    "SELECT * FROM videos WHERE doctor_id = %s AND object_name = %s LIMIT 1;",
+                    (user.uid, object_name)
+                )
             elif user.role == "patient":
-                cur.execute("SELECT * FROM videos WHERE patient_id = %s AND id = %s LIMIT 1;", (user.uid, object_name))
+                cur.execute("SELECT * FROM videos WHERE patient_id = %s AND object_name = %s LIMIT 1;", (user.uid, object_name))
             
             result = cur.fetchone()
             if not result:
@@ -135,10 +138,13 @@ async def download_video(object_name: str, user: FBUser = Security(verifier, sco
                     bucket_name=settings.bucket_name,
                     object_name=video.object_name,
                 )
+                
+                res.headers.add("Content-Disposition", f"inline; filename={video.object_name}")
+                
                 return responses.Response(
                     res.read(),
                     media_type=video.content_type,
-                    filename=video.object_name.removeprefix("videos/")
+                    headers=res.headers,
                 )
             finally:
                 res.close()
@@ -147,7 +153,7 @@ async def download_video(object_name: str, user: FBUser = Security(verifier, sco
     except HTTPException as e:
         raise e
     except Exception as e:
-        logger.error("Error in download_video: %e", e)
+        logger.error("Error in download_video: %s", e)
         raise HTTPException(status_code=500, detail="An error occurred")
                 
 class Role(BaseModel):

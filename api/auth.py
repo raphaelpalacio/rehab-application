@@ -15,10 +15,18 @@ class FBUser(BaseModel):
     email_verified: bool
     role: Literal["doctor", "patient"] | None = None
 
-_test_user = FBUser(
-    user_id="test-uid",
-    email="test-email@gmail.com",
+_test_doctor = FBUser(
+    user_id="doctor-uid",
+    email="test-doctor@gmail.com",
     email_verified=True,
+    role="doctor"
+)
+
+_test_patient = FBUser(
+    user_id="patient-uid",
+    email="test-patient@gmail.com",
+    email_verified=True,
+    role="patient"
 )
 
 class VerifyJWT:
@@ -38,7 +46,7 @@ class VerifyJWT:
         logger.info(f"Verifying JWT token with scopes ${security_scopes.scopes}")
         if settings.bypass_auth:
             # Bypass authentication for testing
-            return _test_user
+            return _test_doctor
 
         if token is None: raise UnAuthorizedException("Requires Authentication Token")
 
