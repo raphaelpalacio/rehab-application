@@ -1,5 +1,5 @@
-import { CameraView, useCameraPermissions, useMicrophonePermissions, CameraMode } from 'expo-camera';
-import { useRef, useState, useEffect } from 'react';
+import { Camera, useCameraDevice, useCameraPermission, useMicrophonePermission } from "react-native-vision-camera"
+import { useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View, Button, Modal, TextInput } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import Constants from 'expo-constants';
@@ -8,15 +8,16 @@ import { RootState } from "../src/store";
 import auth from '@react-native-firebase/auth';
 import { useLocalSearchParams } from 'expo-router';
 import * as FileSystem from 'expo-file-system';
-
-
+import ViewShot from "react-native-view-shot";
 
 const API_URL = Constants.expoConfig?.extra?.API_URL;
 
 const CameraScreen = () => {
-  const [permission, requestPermission] = useCameraPermissions();
-  const [micPermission, requestMicPermission] = useMicrophonePermissions();
-  const ref = useRef<CameraView>(null);
+  const { hasPermission, requestPermission } = useCameraPermission();
+  const { hasPermission: hasMicPermission, requestPermission: requestMicPermission } = useMicrophonePermission();
+  const device = useCameraDevice('front');
+  const ref = useRef<Camera>(null);
+  const viewRef = useRef<ViewShot>(null);
   const [uri, setUri] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const patientId = useSelector((state: RootState) => state.patient.patientId);
@@ -42,19 +43,54 @@ const CameraScreen = () => {
     fetchRole();
   }, []);
 
+    
+  useEffect(() => {
+    if (!recording) return;
 
-  if (!permission || !micPermission) {
-    return <View />;
-  }
+    const sendPhoto = async (formData: FormData) => {
+      try {
+        const res = await fetch(`${API_URL}/video/snapshot`, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            Authorization: `Bearer ${await auth().currentUser?.getIdToken()}`
+          }
+        });
+        console.log(res);
+      } catch (e) {
+        console.log(e);
+      }
+    }
 
-  if (!permission.granted || !micPermission.granted) {
+    const interval = setInterval(() => {
+      viewRef.current?.capture?.().then(uri => {
+        const formData = new FormData();
+        const filename = uri.split('/').pop();
+        formData.append('file', {
+          uri: uri,
+          name: filename,
+          type: 'image/jpeg'
+        } as any);
+
+        sendPhoto(formData);
+        console.log(uri);
+      }).catch(e => console.log(e));
+    }, 500);
+
+    return () => {
+      clearInterval(interval);
+    }
+  }, [recording]);
+
+
+  if (!hasPermission || !hasMicPermission) {
     return (
       <View style={styles.container}>
         <Text style={styles.message}>We need your permission to show the camera</Text>
         <Button 
             onPress={() => {
-                if (!permission.granted) requestPermission();
-                if (!micPermission.granted) requestMicPermission();
+                if (!hasPermission) requestPermission();
+                if (!hasMicPermission) requestMicPermission();
             }} 
             title="grant permission" 
         />
@@ -79,8 +115,10 @@ const CameraScreen = () => {
         console.log('Finished downloading to', res.uri);
         return res.uri;
       } catch (error) {
-        console.error('Error: ', error);
+        console.error("Recording failed:", error);
         throw error;
+      } finally {
+        setRecording(false);
       }
     }
   };
@@ -95,10 +133,16 @@ const CameraScreen = () => {
       if (!recording) {
         setRecording(true);
         try {
-          const video = await ref.current?.recordAsync({ maxDuration: 60 });
-          if (video?.uri) {
-            setUri(video.uri);
-          }
+          const video = ref.current?.startRecording({
+             onRecordingFinished(video) {
+                video.path
+                console.log(video, video.path);
+                // setUri(video.uri)
+              },
+              onRecordingError(error) {
+                console.log(error)
+              },
+          });
         } catch (error) {
           console.error("Recording failed:", error);
         } finally {
@@ -120,13 +164,19 @@ const CameraScreen = () => {
           console.error("Download doctor video error:", error);
           return;
         }
-          setTimeout(async () => {
+          setTimeout(() => {
           setRecording(true);
           try {
-            const video = await ref.current?.recordAsync({ maxDuration: 60 });
-            if (video?.uri) {
-              setUri(video.uri);
-            }
+            const video = ref.current?.startRecording({
+              onRecordingFinished(video) {
+                video.path
+                console.log(video, video.path);
+                // setUri(video.uri)
+              },
+              onRecordingError(error) {
+                console.log(error)
+              },
+            });
           } catch (error) {
             console.error("Recording failed:", error);
           } finally {
@@ -143,17 +193,19 @@ const CameraScreen = () => {
   };
 
   const uploadVideo = async (videoUri: string, title: string) => {
+    return
     if (!videoUri) return;
     try {
       const formData = new FormData();
       const fileName = videoUri.split('/').pop();
+      const extension = videoUri.split('.').pop();
 
-      console.log(videoUri)
+      console.log(videoUri, extension)
 
       formData.append('file', {
         uri: videoUri,
         name: fileName,
-        type: 'video/quicktime',
+        type: extension == '.mov' ? 'video/quicktime': 'video/mp4',
       } as any);
       formData.append('patient_id', patientId);
       formData.append('title', title);
@@ -195,8 +247,7 @@ const CameraScreen = () => {
       </TouchableOpacity>
       <TouchableOpacity style={styles.button} onPress={() => {
         if (uri) setModalVisible(true);  
-      }}
-      >
+      }}>
         <Text style={styles.text}>Upload Video</Text>
       </TouchableOpacity>
 
@@ -219,8 +270,8 @@ const CameraScreen = () => {
                 }
               }}
             >
-            <Text style={styles.text}>Submit</Text>
-          </TouchableOpacity>
+              <Text style={styles.text}>Submit</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -230,13 +281,14 @@ const CameraScreen = () => {
   const renderCamera = () => {
     return (
       <View style={styles.container}>
-        <CameraView 
+        <Camera
           style={styles.camera}
+          device={device!}
           ref={ref}
-          mode="video"
-          facing="front"
-          mute={false}
-          responsiveOrientationWhenOrientationLocked
+          audio={true}
+          video={true}
+          photo={true}
+          isActive
         >
           {doctorVideoUri && role === "patient" && recording && (
             <Video
@@ -258,7 +310,7 @@ const CameraScreen = () => {
               ]}/>
             </TouchableOpacity>
           </View>
-        </CameraView>
+        </Camera>
       </View>
     );
   };

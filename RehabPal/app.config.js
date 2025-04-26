@@ -42,21 +42,19 @@ export default {
         resizeMode: "contain",
         backgroundColor: "#ffffff"
       }],
-      ["expo-video", {
-        supportsBackgroundPlayback: true,
-        supportsPictureInPicture: true
-      }],
       ["expo-av", {
         microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone."
       }],
-      ["expo-camera", {
-        cameraPermission: "Allow $(PRODUCT_NAME) to access your camera",
-        microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone",
-        recordAudioAndroid: true
-      }],
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
-      "expo-video"
+      "expo-video",
+      ["react-native-vision-camera", {
+        "cameraPermissionText": "$(PRODUCT_NAME) needs access to your Camera.",
+
+        // optionally, if you want to record audio:
+        "enableMicrophonePermission": true,
+        "microphonePermissionText": "$(PRODUCT_NAME) needs access to your Microphone."
+      }],
     ],
     experiments: {
       typedRoutes: true

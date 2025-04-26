@@ -46,6 +46,34 @@ class Video(BaseModel):
     content_type: str
     title: str
 
+@video_router.post('/snapshot', status_code=200)
+async def upload_snapshot(
+    file: UploadFile = File(...),
+):
+    """
+    This is used to upload a snapshot file so we can store it. Must be sent as a multipart/form-data request
+    and the file must be of type quicktime (used for mov)
+    """
+    
+    if file is None:
+        raise BadRequestException("No file provided in the request.")
+
+    if file.content_type not in ["image/jpeg", "image/png"]:
+        raise BadRequestException(f"Invalid file type: {file.content_type}. Expected 'image/jpeg' or 'image/png'.")
+
+    res = minio_client.put_object(
+        bucket_name=settings.bucket_name,
+        object_name=f"snapshots/{file.filename}",
+        data=file.file,
+        length=file.size,
+        content_type=file.content_type
+    )
+    
+    if res is None or res.object_name is None:
+        raise HTTPException(status_code=500, detail="Failed to upload video to MinIO")
+    
+    return {"message": "Snapshot uploaded successfully"}
+
 @video_router.post("/upload", status_code=201, response_model=Video)
 async def upload_video(
     file: UploadFile = File(...),
@@ -194,6 +222,7 @@ async def set_user_role(payload: Role, user: FBUser = Security(verifier)):
             return {"message": f"Role '{role}' set successfully", "connect_code": connect_code}
 
     except Exception as e:
+        logger.error("Error in /set-role: %s", e)
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
