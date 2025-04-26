@@ -14,10 +14,27 @@ export default function Login() {
             const userCredential = await auth().signInWithEmailAndPassword(email, password);
             const idToken = await userCredential.user.getIdToken();
             console.log('User Token:', idToken);
+            await retrieveRole();
         } catch(error) {
             console.log(error);
         }
     };
+
+    const retrieveRole = async () => {
+        const user = auth().currentUser;
+        if (user) {
+            const decodedToken = await user.getIdTokenResult();
+            console.log('Claims:', decodedToken.claims);
+
+            const role = decodedToken.claims.role;
+            if (role === 'doctor' || role === 'patient') {
+                router.push(`/${role}` as '/doctor' | '/patient');
+            } else {
+                router.push("/role");
+                console.log("Sophia could never be an academic weapon");
+            }
+        }
+    }
 
     return (
         <View style={styles.container}>

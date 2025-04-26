@@ -19,6 +19,7 @@ export default function Signup() {
       const userCredential = await auth().createUserWithEmailAndPassword(email, password);
       const idToken = await userCredential.user.getIdToken();
       console.log('User Token:', idToken);
+      router.push('/role');
     } catch (error) {
       console.error(error);
     }

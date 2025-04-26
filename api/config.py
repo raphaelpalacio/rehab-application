@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from minio import Minio
 from minio.error import S3Error
 import firebase_admin
+from firebase_admin import credentials
 
 env_path = ".env"
 
@@ -24,6 +25,14 @@ class EnvironmentSettings(BaseSettings):
     minio_access_key: str
     minio_secret_key: str
     bucket_name: str
+    db_name: str
+    db_user: str
+    db_password: str
+    db_host: str
+    db_port: str
+    db_url: str
+    db_schema: str
+
 
     class Config:
         # We will use dotenv to load the environment variables
@@ -35,7 +44,8 @@ if _path.exists():
 
 settings = EnvironmentSettings()
 
-firebase_app = firebase_admin.initialize_app()
+cred = credentials.Certificate(settings.google_application_credentials)
+firebase_app = firebase_admin.initialize_app(cred)
 
 minio_client = Minio(
     endpoint=settings.minio_endpoint,
