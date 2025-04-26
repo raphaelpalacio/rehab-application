@@ -4,14 +4,13 @@ from auth import FBUser, verifier
 from pydantic import BaseModel
 from exceptions import BadRequestException
 from config import minio_client, settings
+from minio.helpers import ObjectWriteResult
 from firebase_admin import auth as admin_auth
 import random
 import string
 from typing import Literal
 from init_db import conn, getDictCursor
 from logger import logger
-import uuid
-import io
 
 # This will be our main router
 router = APIRouter()
@@ -77,9 +76,9 @@ async def upload_snapshot(
 @video_router.post("/upload", status_code=201, response_model=Video)
 async def upload_video(
     file: UploadFile = File(...),
-    patient_id: str = Form(...),
-    title: str = Form(...),
-    user: FBUser = Security(verifier)
+    patient_id: str | None = Form(None),
+    title: str | None = Form(None),
+    user: FBUser = Security(verifier, scopes=default_scopes)
 ):
     """
     This is used to upload a video file so we can store it. Must be sent as a multipart/form-data request
@@ -103,14 +102,30 @@ async def upload_video(
     if res is None or res.object_name is None:
         raise HTTPException(status_code=500, detail="Failed to upload video to MinIO")
     
+    if user.role == 'doctor':
+        if not patient_id or not title:
+            raise HTTPException(status_code=400, detail="Patient ID and title are required for doctors")
+        return await handle_doctor_video(res, file, patient_id, title, user)
+
+async def handle_doctor_video(
+    res: ObjectWriteResult,
+    file: UploadFile,
+    patient_id: str,
+    title: str,
+    user: FBUser
+):
+    """
+    This function handles the video uploaded to minio to synchronize with the database.
+    """
+    
     try:
         with getDictCursor() as cur:
             cur.execute(
                 """
-                    INSERT INTO videos (doctor_id, patient_id, title, object_name, content_type)
-                    VALUES (%s, %s, %s, %s, %s) RETURNING *;
+                    INSERT INTO videos (creator, doctor_id, patient_id, title, object_name, content_type)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING *;
                 """,
-                (user.uid, patient_id, title, res.object_name, file.content_type)
+                (user.uid, user.uid, patient_id, title, res.object_name, file.content_type)
             )
             
             result = cur.fetchone()
@@ -125,7 +140,6 @@ async def upload_video(
         conn.rollback()
         logger.error("Error in upload_video: %e", e)
         raise HTTPException(status_code=500, detail="Internal Server Error")
-
 
 
 @video_router.get('', status_code=200, response_model=list[Video])
@@ -158,7 +172,10 @@ async def download_video(object_name: str, user: FBUser = Security(verifier, sco
                     (user.uid, object_name)
                 )
             elif user.role == "patient":
-                cur.execute("SELECT * FROM videos WHERE patient_id = %s AND object_name = %s LIMIT 1;", (user.uid, object_name))
+                cur.execute(
+                    "SELECT * FROM videos WHERE patient_id = %s AND object_name = %s LIMIT 1;", 
+                    (user.uid, object_name)
+                )
             
             result = cur.fetchone()
             if not result:
@@ -321,20 +338,20 @@ async def get_connect_code(user: FBUser = Security(verifier, scopes=default_scop
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@router.post("/reset-db")
-async def reset_database():
-    """
-    This is used to reset the database.
-    """
-    try:
-        with conn.cursor() as cur:
-            cur.execute("UPDATE patients SET doctor_id = NULL;")
-            cur.execute("UPDATE doctors SET patients = ARRAY[]::text[];")
+# @router.post("/reset-db")
+# async def reset_database():
+#     """
+#     This is used to reset the database.
+#     """
+#     try:
+#         with conn.cursor() as cur:
+#             cur.execute("UPDATE patients SET doctor_id = NULL;")
+#             cur.execute("UPDATE doctors SET patients = ARRAY[]::text[];")
             
-            conn.commit()
-            return {"message": "Database reset successful"}
+#             conn.commit()
+#             return {"message": "Database reset successful"}
 
-    except Exception as e:
-        conn.rollback()
-        print("Error during reset:", e)
-        raise HTTPException(status_code=500, detail="Error resetting database")
+#     except Exception as e:
+#         conn.rollback()
+#         print("Error during reset:", e)
+#         raise HTTPException(status_code=500, detail="Error resetting database")
