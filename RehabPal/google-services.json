@@ -1,0 +1,82 @@
+{
+  "project_info": {
+    "project_number": "944445475284",
+    "project_id": "rehabpal-37271",
+    "storage_bucket": "rehabpal-37271.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:944445475284:android:6ecf39290051e4b2166e41",
+        "android_client_info": {
+          "package_name": "com.sophian3105.RehabPal"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "944445475284-hnnd1ebhtnoorak1tv1ec2c3lsk5fihe.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCrfj_f7j95HaJAfDMhf9kN4NX-K6heoLE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "944445475284-hnnd1ebhtnoorak1tv1ec2c3lsk5fihe.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "944445475284-1bhplb0iq5f4ig2c2snrmcmffh16q8qm.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.sophian3105.RehabPal"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:944445475284:android:eee4b9589cf2545b166e41",
+        "android_client_info": {
+          "package_name": "com.sophian3105.rehabpal"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "944445475284-hnnd1ebhtnoorak1tv1ec2c3lsk5fihe.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCrfj_f7j95HaJAfDMhf9kN4NX-K6heoLE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "944445475284-hnnd1ebhtnoorak1tv1ec2c3lsk5fihe.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "944445475284-1bhplb0iq5f4ig2c2snrmcmffh16q8qm.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.sophian3105.RehabPal"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
