@@ -1,0 +1,6 @@
+fastapi[standard]
+
+requests
+pydantic-settings
+firebase-admin
+
