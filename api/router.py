@@ -123,7 +123,7 @@ async def handle_doctor_video(
             cur.execute(
                 """
                     INSERT INTO videos (creator, doctor_id, patient_id, title, object_name, content_type)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING *;
+                    VALUES (%s, %s, %s, %s, %s, %s) RETURNING *;
                 """,
                 (user.uid, user.uid, patient_id, title, res.object_name, file.content_type)
             )

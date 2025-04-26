@@ -168,8 +168,8 @@ const CameraScreen = () => {
                     onRecordingFinished(video) {
                         video.path;
                         console.log(video, video.path);
-                        // setUri(video.uri)
                         setRecording(false);
+                        setUri(`file://${video.path}`);
                     },
                     onRecordingError(error) {
                         console.log(error);
@@ -184,7 +184,7 @@ const CameraScreen = () => {
                             video.path;
                             console.log(video, video.path);
                             setRecording(false);
-                            // setUri(video.uri)
+                            setUri(`file://${video.path}`)
                         },
                         onRecordingError(error) {
                             console.log(error);
@@ -204,8 +204,8 @@ const CameraScreen = () => {
     };
 
     const uploadVideo = async (videoUri: string, title: string) => {
-        return;
         if (!videoUri) return;
+
         try {
             const formData = new FormData();
             const fileName = videoUri.split("/").pop();
@@ -282,7 +282,7 @@ const CameraScreen = () => {
                             placeholder="e.g. Shoulder Rehab Day 1"
                             value={title}
                             onChangeText={setVideoTitle}
-                        />
+                        /> 
                         <TouchableOpacity
                             style={styles.button}
                             onPress={() => {
