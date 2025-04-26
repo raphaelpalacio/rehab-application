@@ -1,10 +1,6 @@
 from fastapi import FastAPI, Security
 from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
-from config import env_path
-from router import router
-
-load_dotenv(env_path)
+from router import router, video_router
 
 app = FastAPI()
 
@@ -20,3 +16,4 @@ app.add_middleware(
 )
 
 app.include_router(router)
+app.include_router(video_router)

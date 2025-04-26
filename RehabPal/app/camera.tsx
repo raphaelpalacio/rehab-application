@@ -1,6 +1,6 @@
 import { CameraView, CameraType, useCameraPermissions, CameraMode } from 'expo-camera';
 import { useRef, useState } from 'react';
-import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Button, StyleSheet, Text, TouchableOpacity, View, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { ResizeMode, Video } from 'expo-av';
 import AntDesign from "@expo/vector-icons/AntDesign";
@@ -44,8 +44,8 @@ const CameraScreen = () => {
         const video = await ref.current?.recordAsync();
         if (video?.uri) {
           setUri(video.uri);
+          await uploadVideo(video.uri);
         }
-        console.log({ video });
       } catch (error) {
         console.error("Recording failed:", error);
       } finally {
@@ -58,6 +58,46 @@ const CameraScreen = () => {
     ref.current?.stopRecording();
     setRecording(false);
   }
+
+  const uploadVideo = async (videoUri: string) => {
+    if (!videoUri) return;
+    
+    try {
+      const formData = new FormData();
+      const fileName = videoUri.split('/').pop();
+      
+      formData.append('file', {
+        uri,
+        name: fileName,
+        type: 'video/quicktime',
+      } as any);
+
+      const response = await fetch('${API_URL}/video/upload', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Authorization': 'Bearer test',
+        },
+      });
+
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Upload failed:', errorData);
+        throw new Error(errorData.detail || 'Upload failed');
+      }
+
+      const data = await response.json();
+      console.log('Upload successful:', data);
+      Alert.alert('Success', 'Video uploaded successfully');
+      return data;
+    } catch (error) {
+      console.error('Upload error:', error);
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to upload video');
+      throw error;
+    }
+  };
   
 
   const toggleMode = () => {

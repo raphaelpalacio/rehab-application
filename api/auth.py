@@ -4,7 +4,7 @@ from exceptions import UnAuthorizedException
 from firebase_admin import auth
 from config import firebase_app, settings
 from pydantic import BaseModel, Field
-from logger import logging
+from logger import logger
 
 """
 This class contains the contents of a Firebase user
@@ -38,7 +38,7 @@ class VerifyJWT:
         security_scopes: SecurityScopes, 
         token: HTTPAuthorizationCredentials | None = Depends(HTTPBearer())
     ) -> FBUser:
-        logging.info("Verifying JWT token")
+        logger.info("Verifying JWT token")
         if settings.bypass_auth:
             # Bypass authentication for testing
             return _test_user
