@@ -1,4 +1,4 @@
-from fastapi import Security, UploadFile, HTTPException, responses, File, Form
+from fastapi import Security, UploadFile, HTTPException, responses, File, Form, WebSocket, WebSocketDisconnect
 from fastapi.routing import APIRouter
 from auth import FBUser, verifier
 from pydantic import BaseModel
@@ -13,9 +13,8 @@ from init_db import conn, getDictCursor
 from logger import logger
 from ultralytics import YOLO
 from tempfile import NamedTemporaryFile
-import cv2, numpy as np, shutil, os
+import shutil
 import asyncio
-import json
 
 
 model = YOLO("yolo11n-pose.pt")
@@ -30,7 +29,6 @@ default_scopes = ["doctor", "patient"]
 
 def generate_connect_code(length=6):
     return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
-
 
 class HealthCheckResponse(BaseModel):
     status: str
@@ -54,6 +52,71 @@ class Video(BaseModel):
     object_name: str
     content_type: str
     title: str
+
+class Pose(BaseModel):
+    id: int
+    frame_id: int
+    object_name: str
+    keypoints: list[list[list[float]]]
+
+@video_router.websocket('/feedback/{object_name}/ws')
+async def feedback_websocket(
+    websocket: WebSocket, 
+    object_name: str, 
+    user: FBUser = Security(verifier, scopes=['patient'])
+):
+    try:
+        with getDictCursor() as cur:
+            cur.execute(
+                "SELECT * FROM videos WHERE patient_id = %s AND object_name = %s LIMIT 1;", 
+                (user.uid, object_name)
+            )
+            result = cur.fetchone()
+            if not result: 
+                await websocket.close(code=1008, reason="Video not found")
+                return
+            
+            video = Video.model_validate(result)
+            
+            cur.execute(
+                "SELECT * FROM poses WHERE object_name = %s ORDER BY frame_id ASC;",
+                (video.object_name)
+            )
+            
+            poses = [Pose.model_validate(pose) for pose in cur.fetchall()]
+            
+            if len(poses) == 0:
+                await websocket.close(code=1008, reason="No poses found for this video")
+                return
+            
+            await websocket.accept()
+            
+    except Exception as e:
+        await websocket.close(code=1008, reason="An error occurred: " + str(e))
+        return
+    
+    while True:
+        try:
+            frame = int(await websocket.receive_text())
+            image = await websocket.receive_bytes()
+
+            with NamedTemporaryFile(suffix=".jpg") as tmp:
+                tmp.write(image)
+                tmp.flush()
+                results = model.track(source=tmp.name)
+                print(results)
+
+            kpts_array = results[0].keypoints.data.cpu().numpy().tolist()
+            compare_to = poses[frame].keypoints
+            
+            print(kpts_array, compare_to)
+
+        except WebSocketDisconnect:
+            return
+        except Exception as e:
+            logger.error("Error in feedback_websocket: %s", e)
+            await websocket.close(code=1008, reason="An error occurred: " + str(e))
+            return
 
 @video_router.post('/snapshot', status_code=200)
 async def upload_snapshot(
@@ -91,9 +154,9 @@ async def pose_estimation (file: UploadFile = File(...)):
         raise HTTPException(status_code=415, detail="Unsupported media type")
 
     with NamedTemporaryFile(suffix=".mp4") as tmp:
-        shutil.copyfileobj(file.file, tmp)
+        shutil.copyfileobj(file.file, tmp) # this streams the bytes :)
         print(tmp)
-        results = model.track(source = tmp.name, save = True, stream = True)
+        results = model.track(source = tmp.name, stream = True)
         object_name = f"videos/{file.filename}"
 
         for frame_id, res in enumerate(results):
