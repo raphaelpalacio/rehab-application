@@ -2,6 +2,7 @@ import {
     Camera,
     useCameraDevice,
     useCameraPermission,
+    useFrameProcessor,
     useMicrophonePermission,
 } from "react-native-vision-camera";
 import { useEffect, useRef, useState } from "react";
@@ -46,6 +47,13 @@ const CameraScreen = () => {
     const [role, setRole] = useState<string | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [doctorVideoUri, setDoctorVideoUri] = useState<string | null>(null);
+    const [frame, setFrame] = useState(0);
+    const frameCounter = useFrameProcessor(f => {
+        'worklet'
+
+        // We want to set the frame every second 
+        setFrame(prev => prev + 1);
+    }, []);
 
     useEffect(() => {
         const fetchRole = async () => {
@@ -310,6 +318,7 @@ const CameraScreen = () => {
                         resizeMode={ResizeMode.COVER}
                         shouldPlay
                         isLooping
+                        onLoad={() => setFrame(0)}
                     />
                 )}
 
@@ -319,7 +328,7 @@ const CameraScreen = () => {
                     ref={ref}
                     audio={true}
                     video={true}
-                    // photo={true}
+                    frameProcessor={frameCounter}
                     isActive
                 />
 
