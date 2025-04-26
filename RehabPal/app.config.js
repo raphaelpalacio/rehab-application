@@ -47,7 +47,6 @@ export default {
       }],
       "@react-native-firebase/app",
       "@react-native-firebase/auth",
-      "expo-video",
       ["react-native-vision-camera", {
         "cameraPermissionText": "$(PRODUCT_NAME) needs access to your Camera.",
 
