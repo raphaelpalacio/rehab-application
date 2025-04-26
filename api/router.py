@@ -11,6 +11,16 @@ import string
 from typing import Literal
 from init_db import conn, getDictCursor
 from logger import logger
+from ultralytics import YOLO
+from tempfile import NamedTemporaryFile
+import cv2, numpy as np, shutil, os
+import asyncio
+import json
+
+
+model = YOLO("yolo11n-pose.pt")
+ALLOWED_MIME = {"video/mp4", "video/quicktime"}
+
 
 # This will be our main router
 router = APIRouter()
@@ -73,6 +83,33 @@ async def upload_snapshot(
     
     return {"message": "Snapshot uploaded successfully"}
 
+async def pose_estimation (file: UploadFile = File(...)):
+    if file is None:
+        raise BadRequestException("No file provided in the request.")
+
+    if file.content_type not in ALLOWED_MIME:
+        raise HTTPException(status_code=415, detail="Unsupported media type")
+
+    with NamedTemporaryFile(suffix=".mp4") as tmp:
+        shutil.copyfileobj(file.file, tmp)
+        print(tmp)
+        results = model.track(source = tmp.name, save = True, stream = True)
+        object_name = f"videos/{file.filename}"
+
+        for frame_id, res in enumerate(results):
+            kpts_array = res.keypoints.data.cpu().numpy()  
+            keypoints: list[list[list[float]]] = kpts_array.tolist()
+
+            with getDictCursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO poses (frame_id, object_name, keypoints)
+                    VALUES (%s, %s, %s);
+                    """,
+                    (frame_id, object_name, keypoints)
+                )
+                conn.commit()   
+
 @video_router.post("/upload", status_code=201, response_model=Video)
 async def upload_video(
     file: UploadFile = File(...),
@@ -129,11 +166,14 @@ async def handle_doctor_video(
             )
             
             result = cur.fetchone()
+        
             if result is None:
                 raise HTTPException(status_code=500, detail="Failed to insert video record into database")
             
             video = Video.model_validate(result)
             conn.commit()
+
+            asyncio.create_task(pose_estimation(file))
             
             return video
     except Exception as e:

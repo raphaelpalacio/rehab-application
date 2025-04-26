@@ -11,8 +11,6 @@ CREATE TABLE IF NOT EXISTS patients (
     doctor_id VARCHAR(36) DEFAULT NULL REFERENCES doctors(id)
 );
 
-ALTER TABLE videos ADD COLUMN video_title TEXT NOT NULL DEFAULT '';
-
 CREATE TABLE IF NOT EXISTS videos (
     id SERIAL PRIMARY KEY,
     creator VARCHAR(36),
@@ -22,5 +20,12 @@ CREATE TABLE IF NOT EXISTS videos (
     object_name TEXT NOT NULL,
     content_type TEXT NOT NULL,
     uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS poses (
+    id SERIAL PRIMARY KEY,
+    frame_id INTEGER, 
+    object_name TEXT NOT NULL,
+    keypoints DOUBLE PRECISION[][]
 );
 
