@@ -71,9 +71,9 @@ export default function Patient() {
       <Text style={styles.subtitle}>Your connect code is: {code}</Text>
       
       <View style={styles.buttonContainer}>
-        <Link href="/login" asChild>
+        <Link href="/patient/inbox" asChild>
           <TouchableOpacity style={styles.button}>
-            <Text style={styles.buttonText}>Login</Text>
+            <Text style={styles.buttonText}>Inbox</Text>
           </TouchableOpacity>
         </Link>
         
