@@ -23,7 +23,8 @@ import { RootState } from "../slices/store";
 import auth from "@react-native-firebase/auth";
 import { useLocalSearchParams } from "expo-router";
 import * as FileSystem from "expo-file-system";
-import { Worklets } from "react-native-worklets-core";
+import { useSharedValue } from "react-native-worklets-core";
+
 const API_URL = Constants.expoConfig?.extra?.API_URL;
 
 const CameraScreen = () => {
@@ -46,15 +47,13 @@ const CameraScreen = () => {
     const [role, setRole] = useState<string | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [doctorVideoUri, setDoctorVideoUri] = useState<string | null>(null);
-    const [frame, setFrame] = useState(0);
-    const incrementFrame = Worklets.createRunOnJS(() => {
-        setFrame(f => f + 1);
-    });
+    
+    const frame = useSharedValue(0);
 
     const frameProcessor = useFrameProcessor((f) => {
         "worklet";
-        incrementFrame();
-    }, []);
+        frame.value += 1;
+    }, [frame]);
 
     useEffect(() => {
         const fetchRole = async () => {
@@ -66,13 +65,7 @@ const CameraScreen = () => {
                 setToken(fetchedToken);
 
                 if (decodedToken.claims.role == 'patient') {
-                    downloadDoctorVideo(videoObjectName).then(
-                        (downloadedUri) => {
-                            if (!downloadedUri) return;
-
-                            setDoctorVideoUri(downloadedUri);
-                        }
-                    );
+                    downloadDoctorVideo(videoObjectName)
                 }
             }
         };
@@ -101,16 +94,17 @@ const CameraScreen = () => {
         const interval = setInterval(() => {
             ref.current?.takeSnapshot()
                 .then((snapshot) => {
-                    const formData = new FormData();
-                    const filename = snapshot.path.split("/").pop();
-                    formData.append("file", {
-                        uri: `file://${snapshot.path}`,
-                        name: filename,
-                        type: "image/jpeg",
-                    } as any);
+                    // const formData = new FormData();
+                    // const filename = snapshot.path.split("/").pop();
+                    // formData.append("file", {
+                    //     uri: `file://${snapshot.path}`,
+                    //     name: filename,
+                    //     type: "image/jpeg",
+                    // } as any);
 
-                    sendPhoto(formData);
-                    console.log(snapshot);
+                    // sendPhoto(formData);
+                    // console.log(snapshot);
+                    console.log(frame.value);
                 })
                 .catch((e) => console.log(e));
         }, 500);
@@ -140,8 +134,7 @@ const CameraScreen = () => {
     const downloadDoctorVideo = async (videoObjectName: string) => {
         const doctorVideoURL = `${API_URL}/video/download/${videoObjectName}`;
         if (FileSystem.cacheDirectory) {
-            const localUri =
-                FileSystem.cacheDirectory + videoObjectName.split("/").pop();
+            const localUri = FileSystem.cacheDirectory + videoObjectName.split("/").pop();
             try {
                 const res = await FileSystem.downloadAsync(
                     doctorVideoURL,
@@ -153,12 +146,11 @@ const CameraScreen = () => {
                     }
                 );
                 console.log("Finished downloading to", res.uri);
-                return res.uri;
+                
+                setDoctorVideoUri(res.uri);
             } catch (error) {
                 console.error("Recording failed:", error);
                 throw error;
-            } finally {
-                setRecording(false);
             }
         }
     };
@@ -168,43 +160,23 @@ const CameraScreen = () => {
             console.log("Role not loaded yet");
             return;
         }
-        
-        setRecording((prev) => {
-            if (prev) return true;
-
-            if (role === "doctor") {
-                ref.current?.startRecording({
-                    onRecordingFinished(video) {
-                        video.path;
-                        console.log(video, video.path);
-                        setRecording(false);
-                        setUri(`file://${video.path}`);
-                    },
-                    onRecordingError(error) {
-                        console.log(error);
-                        setRecording(false);
-                    },
-                });
-            } else if (role === "patient") {
-                Alert.alert("Recording will start in 5 seconds!");
-                setTimeout(() => {
-                    ref.current?.startRecording({
-                        onRecordingFinished(video) {
-                            video.path;
-                            console.log(video, video.path);
-                            setRecording(false);
-                            setUri(`file://${video.path}`)
-                        },
-                        onRecordingError(error) {
-                            console.log(error);
-                            setRecording(false);
-                        },
-                    });
-                }, 5000);
-            }
-
-            return true;
-        });
+                
+        Alert.alert("Recording will start in 5 seconds!");
+        setTimeout(() => {
+            ref.current?.startRecording({
+                onRecordingFinished(video) {
+                    video.path;
+                    console.log(video, video.path);
+                    setRecording(false);
+                    setUri(`file://${video.path}`);
+                },
+                onRecordingError(error) {
+                    console.log(error);
+                    setRecording(false);
+                },
+            });
+            setRecording(true);
+        }, 5000);
     };
 
     const stopVideo = async () => {
@@ -225,7 +197,7 @@ const CameraScreen = () => {
             formData.append("file", {
                 uri: videoUri,
                 name: fileName,
-                type: extension == ".mov" ? "video/quicktime" : "video/mp4",
+                type: extension == "mov" ? "video/quicktime" : "video/mp4",
             } as any);
             formData.append("patient_id", patientId);
             formData.append("title", title);
@@ -309,6 +281,7 @@ const CameraScreen = () => {
         </View>
     );
 
+    console.log(role, doctorVideoUri, recording);
     const renderCamera = () => {
         return (
             <View style={styles.container}>
@@ -319,10 +292,12 @@ const CameraScreen = () => {
                         resizeMode={ResizeMode.COVER}
                         shouldPlay
                         isLooping
-                        onLoad={() => setFrame(0)}
+                        onLoad={() => {
+                            console.log("hello");
+                            frame.value = 0;
+                        }}
                     />
                 )}
-
                 <Camera
                     style={styles.camera}
                     device={device!}
