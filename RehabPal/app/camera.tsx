@@ -141,7 +141,6 @@ const CameraScreen = () => {
 
         return () => {
             clearInterval(interval);
-            setFeedback(0.0);
         };
     }, [recording, videoLoaded]);
 
@@ -224,6 +223,7 @@ const CameraScreen = () => {
         ref.current?.stopRecording();
         setRecording(false);
         setVideoLoaded(false);
+        setFeedback(0.0);
     };
 
     const uploadVideo = async (videoUri: string, title: string) => {

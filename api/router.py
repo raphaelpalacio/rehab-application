@@ -83,7 +83,7 @@ async def feedback_websocket(
 
             cur.execute(
                 "SELECT * FROM poses WHERE object_name = %s AND frame_id = %s;",
-                (object_name, get_frame,)
+                (object_name, get_frame)
             )
 
             tmp = cur.fetchone()
@@ -175,7 +175,7 @@ async def pose_estimation (object_name: str, content_type: str):
                         INSERT INTO poses (frame_id, object_name, keypoints)
                         VALUES (%s, %s, %s::double precision[][][]);
                         """,
-                        (frame_id, object_name, keypoints)
+                        (frame_id // 5, object_name, keypoints)
                     )
 
         conn.commit()
