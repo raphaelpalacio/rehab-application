@@ -1,7 +1,30 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
+import auth from "@react-native-firebase/auth"
+import { FirebaseAuthTypes } from '@react-native-firebase/auth';
+import { useEffect, useState } from 'react';
 
 export default function LandingPage() {
+  const router = useRouter();
+
+  function onAuthStateChanged(user: FirebaseAuthTypes.User | null) {
+    if (!user) return;
+    
+    user.getIdTokenResult().then(res => {
+      const role: 'doctor' | 'patient' | null = res.claims.role;
+      if (role) {
+        router.push(`/${role}`);
+      } else {
+        router.push("/role");
+      }
+    });
+  }
+
+  useEffect(() => {
+    const subscriber = auth().onAuthStateChanged(onAuthStateChanged);
+    return subscriber;
+  }, []);
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Welcome to RehabPal</Text>

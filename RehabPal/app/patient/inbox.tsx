@@ -9,9 +9,8 @@ const API_URL = Constants.expoConfig?.extra?.API_URL;
 
 type Video = {
   id: number;
+  title: string;
   object_name: string;
-  description: string;
-  content_type: string;
 };
 
 
@@ -48,7 +47,6 @@ export default function Videos() {
     const fetchData = async () => {
       await getVideos(); 
     };
-
     fetchData();
   }, []);
 
@@ -56,10 +54,20 @@ export default function Videos() {
     <View style={styles.container}>
       <Text style={styles.title}>Videos</Text>
       {videos.map((video, index) => (
-        <Link key={video.id} href="/camera" asChild>
+        <Link 
+          key={video.id} 
+          href={{
+            pathname: "/camera",
+            params: { 
+              videoTitle: video.title, 
+              videoObjectName: video.object_name 
+            }
+          }} 
+          asChild
+        >
           <TouchableOpacity>
             <Text style={styles.videoItem}>
-              {video.description || video.object_name}
+              {video.title || video.object_name}
             </Text>
           </TouchableOpacity>
         </Link>

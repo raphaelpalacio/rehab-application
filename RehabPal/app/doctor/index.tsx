@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity, TextInput, Modal, StyleSheet} from 'react-native';
-import { Link } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import auth from '@react-native-firebase/auth';
 import Constants from 'expo-constants';
 import React, { useState, useEffect} from 'react';
@@ -8,6 +8,7 @@ import React, { useState, useEffect} from 'react';
 const API_URL = Constants.expoConfig?.extra?.API_URL;
 
 export default function Doctor() {
+  const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
   const [connectCode, setConnectCode] = useState('');
   const [code, setCode] = useState('');
@@ -79,8 +80,17 @@ export default function Doctor() {
         </Link>
 
         <TouchableOpacity style={styles.button} onPress={() => setModalVisible(true)}>
-        <Text style={styles.buttonText}>Connect</Text>
-      </TouchableOpacity>
+            <Text style={styles.buttonText}>Connect</Text>
+        </TouchableOpacity >
+        <TouchableOpacity style={styles.button} onPress={() => {
+            auth().signOut().then(_ => {
+                router.dismissAll();
+            });
+        }}>
+            <Text style={styles.buttonText}>
+                Sign Out
+            </Text>
+        </TouchableOpacity>
 
       <Modal visible={modalVisible} animationType="slide" transparent>
         <View style={styles.modalContainer}>
@@ -102,12 +112,6 @@ export default function Doctor() {
           </View>
         </View>
       </Modal>
-
-        <Link href="/camera" asChild>
-          <TouchableOpacity style={styles.button}>
-            <Text style={styles.buttonText}>Camera</Text>
-          </TouchableOpacity>
-        </Link>
       </View>
     </View>
   );

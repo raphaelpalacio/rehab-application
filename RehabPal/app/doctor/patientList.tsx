@@ -25,16 +25,15 @@ const PatientList = () => {
         const token = await user.getIdToken();
 
         try {
-        const res = await fetch(`${API_URL}/connections`, {
-            method: 'GET',
-            headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-            },
-        });
-
-        const data = await res.json();
-        setPatients(data.patients);
+          const res = await fetch(`${API_URL}/connections`, {
+              method: 'GET',
+              headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              },
+          });
+          const data = await res.json();
+          setPatients(data.patients);
         } catch (err) {
         console.error('Error fetching patients:', err);
         }
@@ -46,7 +45,7 @@ const PatientList = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Your Patients</Text>
+      <Text style={styles.title}>Your Patients</Text>
       <FlatList
         data={patients}
         keyExtractor={(item) => item.id}
@@ -78,13 +77,13 @@ container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
     backgroundColor: 'black',
 },
 title: {
     fontSize: 32,
     fontWeight: 'bold',
     marginBottom: 10,
+    paddingTop: 70,
     color: 'white',
 },
 subtitle: {
