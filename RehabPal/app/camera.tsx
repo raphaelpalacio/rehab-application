@@ -27,6 +27,24 @@ import { useSharedValue } from "react-native-worklets-core";
 
 const API_URL = Constants.expoConfig?.extra?.API_URL;
 
+const COLOR_STOPS: { limit: number; color: string }[] = [
+    { limit: 0, color: "#d3d3d3" }, // light transparent gray
+    { limit: 200, color: "#27ae60" }, // emerald
+    { limit: 250, color: "#2ecc71" }, // bright green
+    { limit: 300, color: "#f1c40f" }, // yellow
+    { limit: 350, color: "#f39c12" }, // orange-yellow
+    { limit: 400, color: "#e67e22" }, // orange
+    { limit: 450, color: "#d35400" }, // dark orange
+    { limit: Infinity, color: "#e74c3c" }, // red
+];
+
+function getErrorColor(val: number): string {
+    for (const stop of COLOR_STOPS) {
+        if (val <= stop.limit) return stop.color;
+    }
+    return COLOR_STOPS[COLOR_STOPS.length - 1].color;
+}
+
 const CameraScreen = () => {
     const { hasPermission, requestPermission } = useCameraPermission();
     const {
@@ -47,13 +65,17 @@ const CameraScreen = () => {
     const [role, setRole] = useState<string | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [doctorVideoUri, setDoctorVideoUri] = useState<string | null>(null);
-    
+    const [feedback, setFeedback] = useState<number>(0.0);
+
     const frame = useSharedValue(0);
 
-    const frameProcessor = useFrameProcessor((f) => {
-        "worklet";
-        frame.value += 1;
-    }, [frame]);
+    const frameProcessor = useFrameProcessor(
+        (f) => {
+            "worklet";
+            frame.value += 1;
+        },
+        [frame]
+    );
 
     useEffect(() => {
         const user = auth().currentUser;
@@ -64,12 +86,12 @@ const CameraScreen = () => {
                 setRole(decodedToken.claims.role || null);
                 setToken(fetchedToken);
 
-                if (decodedToken.claims.role == 'patient') {
-                    downloadDoctorVideo(videoObjectName, fetchedToken)
+                if (decodedToken.claims.role == "patient") {
+                    downloadDoctorVideo(videoObjectName, fetchedToken);
                 }
             }
         };
-        
+
         fetchRole();
     }, []);
 
@@ -85,14 +107,20 @@ const CameraScreen = () => {
                         Authorization: `Bearer ${await auth().currentUser?.getIdToken()}`,
                     },
                 });
-                console.log(res);
+                const data = await res.json();
+                if (data?.mean_thresh != null && data?.mean_thresh > 0.0) {
+                    setFeedback(data.mean_thresh);
+                } 
+
+                console.log(data);
             } catch (e) {
                 console.log(e);
             }
         };
 
         const interval = setInterval(() => {
-            ref.current?.takeSnapshot()
+            ref.current
+                ?.takeSnapshot()
                 .then((snapshot) => {
                     const formData = new FormData();
                     const filename = snapshot.path.split("/").pop();
@@ -102,16 +130,17 @@ const CameraScreen = () => {
                         type: "image/jpeg",
                     } as any);
 
-                    formData.append('object_name', videoObjectName)
-                    formData.append('frame', frame.value.toString());
+                    formData.append("object_name", videoObjectName);
+                    formData.append("frame", frame.value.toString());
 
                     sendPhoto(formData);
                 })
                 .catch((e) => console.log(e));
-        }, 500);
+        }, 700);
 
         return () => {
             clearInterval(interval);
+            setFeedback(0.0);
         };
     }, [recording]);
 
@@ -132,10 +161,14 @@ const CameraScreen = () => {
         );
     }
 
-    const downloadDoctorVideo = async (videoObjectName: string, token: string) => {
+    const downloadDoctorVideo = async (
+        videoObjectName: string,
+        token: string
+    ) => {
         const doctorVideoURL = `${API_URL}/video/download/${videoObjectName}`;
         if (FileSystem.cacheDirectory) {
-            const localUri = FileSystem.cacheDirectory + videoObjectName.split("/").pop();
+            const localUri =
+                FileSystem.cacheDirectory + videoObjectName.split("/").pop();
             try {
                 const res = await FileSystem.downloadAsync(
                     doctorVideoURL,
@@ -147,7 +180,7 @@ const CameraScreen = () => {
                     }
                 );
                 console.log("Finished downloading to", res.uri);
-                
+
                 setDoctorVideoUri(res.uri);
             } catch (error) {
                 console.error("Recording failed:", error);
@@ -161,23 +194,30 @@ const CameraScreen = () => {
             console.log("Role not loaded yet");
             return;
         }
-                
+
         Alert.alert("Recording will start in 5 seconds!");
-        setTimeout(() => {
-            ref.current?.startRecording({
-                onRecordingFinished(video) {
-                    video.path;
-                    console.log(video, video.path);
-                    setRecording(false);
-                    setUri(`file://${video.path}`);
-                },
-                onRecordingError(error) {
-                    console.log(error);
-                    setRecording(false);
-                },
-            });
-            setRecording(true);
-        }, 5000);
+        if (role == 'doctor') {
+            setTimeout(() => {
+                ref.current?.startRecording({
+                    onRecordingFinished(video) {
+                        video.path;
+                        console.log(video, video.path);
+                        setRecording(false);
+                        setUri(`file://${video.path}`);
+                    },
+                    onRecordingError(error) {
+                        console.log(error);
+                        setRecording(false);
+                    },
+                });
+                setRecording(true);
+            }, 5000);
+        } else {
+            setTimeout(() => {
+                setRecording(true);
+            }, 5000);
+        }
+
     };
 
     const stopVideo = async () => {
@@ -192,8 +232,6 @@ const CameraScreen = () => {
             const formData = new FormData();
             const fileName = videoUri.split("/").pop();
             const extension = videoUri.split(".").pop();
-
-            console.log(videoUri, extension);
 
             formData.append("file", {
                 uri: videoUri,
@@ -215,7 +253,6 @@ const CameraScreen = () => {
             }
 
             const data = await response.json();
-            console.log("Upload successful:", data);
             Alert.alert("Success", "Video uploaded successfully");
             return data;
         } catch (error) {
@@ -264,7 +301,7 @@ const CameraScreen = () => {
                             placeholder="e.g. Shoulder Rehab Day 1"
                             value={title}
                             onChangeText={setVideoTitle}
-                        /> 
+                        />
                         <TouchableOpacity
                             style={styles.button}
                             onPress={() => {
@@ -282,7 +319,6 @@ const CameraScreen = () => {
         </View>
     );
 
-    console.log(role, doctorVideoUri, recording);
     const renderCamera = () => {
         return (
             <View style={styles.container}>
@@ -301,18 +337,48 @@ const CameraScreen = () => {
                         style={StyleSheet.absoluteFill}
                         resizeMode={ResizeMode.COVER}
                         shouldPlay
-                        isLooping = {false}
-                        onPlaybackStatusUpdate={(status: AVPlaybackStatus) => {
-                            if (!status.isLoaded) return
-                        
-                            const { positionMillis, durationMillis, isPlaying } = status
-                            if (durationMillis && positionMillis >= durationMillis - 50 && !isPlaying) {
-                                stopVideo()
+                        isLooping={false}
+                        onLoad={(status) => {
+                            if (!status.isLoaded) return;
+                                ref.current?.startRecording({
+                                    onRecordingFinished(video) {
+                                        video.path;
+                                        console.log(video, video.path);
+                                        setRecording(false);
+                                        setUri(`file://${video.path}`);
+                                    },
+                                    onRecordingError(error) {
+                                        console.log(error);
+                                        setRecording(false);
+                                    },
+                                });
+                                frame.value = 0;
                             }
-                          }}
+                        }
+                        onPlaybackStatusUpdate={(status: AVPlaybackStatus) => {
+                            if (!status.isLoaded) return;
+
+                            const {
+                                positionMillis,
+                                durationMillis,
+                                isPlaying,
+                            } = status;
+                            if (
+                                durationMillis &&
+                                positionMillis >= durationMillis - 50 &&
+                                !isPlaying
+                            ) {
+                                stopVideo();
+                            }
+                        }}
                     />
                 )}
-                <View style={styles.buttonContainer}>
+                <View
+                    style={[
+                        styles.buttonContainer,
+                        { backgroundColor: getErrorColor(feedback) },
+                    ]}
+                >
                     <TouchableOpacity
                         style={styles.shutterButton}
                         onPress={recording ? stopVideo : recordVideo}

@@ -13,7 +13,7 @@ from init_db import conn, getDictCursor
 from logger import logger
 from ultralytics import YOLO
 from tempfile import NamedTemporaryFile
-import shutil
+import numpy as np
 import asyncio
 
 
@@ -84,9 +84,9 @@ async def feedback_websocket(
             )
 
             tmp = cur.fetchone()
-            
+
             if (not tmp): return 0.0
-            
+
             pose = Pose.model_validate(tmp)
             logger.info(f"Downloaded poses for {object_name} - video frame {get_frame}")
 
@@ -94,10 +94,20 @@ async def feedback_websocket(
             tmp.write(await file.read())
             tmp.flush()
             results = model.track(source=tmp.name)
-            kpts_array = results[0].keypoints.data.cpu().numpy().tolist()
-            keypoints = pose.keypoints
+            kpts_array = results[0].keypoints.data.cpu().numpy()
+            keypoints = np.array(pose.keypoints)
 
-        print(kpts_array, keypoints)
+        dists = np.linalg.norm(kpts_array[:, :2] - keypoints[:, :2], axis=1)
+
+        mean_all = np.mean(dists)
+        mask = (kpts_array[:, 2] > 0.5) & (keypoints[:, 2] > 0.5)
+        mean_thresh = np.mean(dists[mask])
+        
+        weights = (kpts_array[:, 2] + kpts_array[:, 2]) / 2
+        weighted_mean = (dists * weights).sum() / weights.sum()
+
+        logger.info(f"Calculated mean distance: {weighted_mean}")
+        return {'weighted_mean': weighted_mean, 'mean_all': mean_all, 'mean_thresh': mean_thresh}
     except Exception as e:
         logger.error("Error %s:", e)
         raise HTTPException(status_code=500, detail="Internal Server Error")
