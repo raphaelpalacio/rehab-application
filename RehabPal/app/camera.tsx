@@ -19,7 +19,7 @@ import {
 import { Video, ResizeMode } from "expo-av";
 import Constants from "expo-constants";
 import { useSelector } from "react-redux";
-import { RootState } from "../src/store";
+import { RootState } from "../slices/store";
 import auth from "@react-native-firebase/auth";
 import { useLocalSearchParams } from "expo-router";
 import * as FileSystem from "expo-file-system";

@@ -4,7 +4,7 @@ import Constants from 'expo-constants';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity} from 'react-native';
 import { router } from 'expo-router';
 import { useDispatch } from "react-redux";
-import { setPatientId } from "../../src/patientSlice";
+import { setPatientId } from "../../slices/patientSlice";
 
 
 
