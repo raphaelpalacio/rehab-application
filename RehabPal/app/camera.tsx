@@ -66,6 +66,7 @@ const CameraScreen = () => {
     const [token, setToken] = useState<string | null>(null);
     const [doctorVideoUri, setDoctorVideoUri] = useState<string | null>(null);
     const [feedback, setFeedback] = useState<number>(0.0);
+    const [videoLoaded, setVideoLoaded] = useState<boolean>(false);
 
     const frame = useSharedValue(0);
 
@@ -96,7 +97,7 @@ const CameraScreen = () => {
     }, []);
 
     useEffect(() => {
-        if (!recording) return;
+        if (!recording || !videoLoaded) return;
 
         const sendPhoto = async (formData: FormData) => {
             try {
@@ -142,7 +143,7 @@ const CameraScreen = () => {
             clearInterval(interval);
             setFeedback(0.0);
         };
-    }, [recording]);
+    }, [recording, videoLoaded]);
 
     if (!hasPermission || !hasMicPermission) {
         return (
@@ -214,15 +215,15 @@ const CameraScreen = () => {
             }, 5000);
         } else {
             setTimeout(() => {
-                setRecording(true);
-            }, 5000);
+                setVideoLoaded(true);
+            }, 3000);
         }
-
     };
 
     const stopVideo = async () => {
         ref.current?.stopRecording();
         setRecording(false);
+        setVideoLoaded(false);
     };
 
     const uploadVideo = async (videoUri: string, title: string) => {
@@ -331,7 +332,7 @@ const CameraScreen = () => {
                     frameProcessor={frameProcessor}
                     isActive
                 />
-                {doctorVideoUri && role === "patient" && recording && (
+                {doctorVideoUri && role === "patient" && videoLoaded && (
                     <Video
                         source={{ uri: doctorVideoUri }}
                         style={StyleSheet.absoluteFill}
@@ -340,21 +341,22 @@ const CameraScreen = () => {
                         isLooping={false}
                         onLoad={(status) => {
                             if (!status.isLoaded) return;
-                                ref.current?.startRecording({
-                                    onRecordingFinished(video) {
-                                        video.path;
-                                        console.log(video, video.path);
-                                        setRecording(false);
-                                        setUri(`file://${video.path}`);
-                                    },
-                                    onRecordingError(error) {
-                                        console.log(error);
-                                        setRecording(false);
-                                    },
-                                });
-                                frame.value = 0;
-                            }
-                        }
+
+                            ref.current?.startRecording({
+                                onRecordingFinished(video) {
+                                    video.path;
+                                    console.log(video, video.path);
+                                    stopVideo();
+                                    setUri(`file://${video.path}`);
+                                },
+                                onRecordingError(error) {
+                                    console.log(error);
+                                    stopVideo();
+                                },
+                            });
+                            setRecording(true);
+                            frame.value = 0;
+                        }}
                         onPlaybackStatusUpdate={(status: AVPlaybackStatus) => {
                             if (!status.isLoaded) return;
 
