@@ -60,6 +60,7 @@ export default {
     },
     extra: {
       API_URL: process.env.API_URL || "http://localhost:8000",
+      API_WS_URL: process.env.API_WS_URL || "ws://localhost:8000"
     }
   }
 };
