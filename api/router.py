@@ -67,20 +67,23 @@ async def feedback_websocket(
     user: FBUser = Security(verifier, scopes=['patient'])
 ):
     try:
+        logger.info(f"Received feedback for {object_name} - video frame {frame}")
+        
         with getDictCursor() as cur:
             cur.execute(
                 "SELECT COUNT(*) AS total_rows FROM poses WHERE object_name = %s;", 
-                (object_name)
+                (object_name,)
             )
             result = cur.fetchone()
             if not result or result['total_rows'] == 0: 
                 raise HTTPException(status_code=404, detail="Video not found")
 
+            logger.info(f"Total rows for {object_name}: {result['total_rows']}")
             get_frame = max(frame // 5, result["total_rows"] - 1)
 
             cur.execute(
                 "SELECT * FROM poses WHERE object_name = %s AND frame_id = %s;",
-                (object_name, get_frame)
+                (object_name, get_frame,)
             )
 
             tmp = cur.fetchone()
