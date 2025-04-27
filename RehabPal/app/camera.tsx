@@ -29,12 +29,12 @@ const API_URL = Constants.expoConfig?.extra?.API_URL;
 
 const COLOR_STOPS: { limit: number; color: string }[] = [
     { limit: 0, color: "#d3d3d3" }, // light transparent gray
-    { limit: 200, color: "#27ae60" }, // emerald
-    { limit: 250, color: "#2ecc71" }, // bright green
-    { limit: 300, color: "#f1c40f" }, // yellow
-    { limit: 350, color: "#f39c12" }, // orange-yellow
-    { limit: 400, color: "#e67e22" }, // orange
-    { limit: 450, color: "#d35400" }, // dark orange
+    { limit: 500, color: "#27ae60" }, // emerald
+    { limit: 550, color: "#2ecc71" }, // bright green
+    { limit: 600, color: "#f1c40f" }, // yellow
+    { limit: 650, color: "#f39c12" }, // orange-yellow
+    { limit: 700, color: "#e67e22" }, // orange
+    { limit: 750, color: "#d35400" }, // dark orange
     { limit: Infinity, color: "#e74c3c" }, // red
 ];
 

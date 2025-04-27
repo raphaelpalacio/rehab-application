@@ -69,8 +69,8 @@ async def feedback_websocket(
     try:
         with getDictCursor() as cur:
             cur.execute(
-                "SELECT COUNT(*) AS total_rows FROM videos WHERE patient_id = %s AND object_name = %s;", 
-                (user.uid, object_name)
+                "SELECT COUNT(*) AS total_rows FROM poses WHERE object_name = %s;", 
+                (object_name)
             )
             result = cur.fetchone()
             if not result or result['total_rows'] == 0: 
@@ -94,8 +94,8 @@ async def feedback_websocket(
             tmp.write(await file.read())
             tmp.flush()
             results = model.track(source=tmp.name)
-            kpts_array = results[0].keypoints.data.cpu().numpy()
-            keypoints = np.array(pose.keypoints)
+            kpts_array = results[0].keypoints.data.cpu().numpy()[0]
+            keypoints = np.array(pose.keypoints[0])
 
         dists = np.linalg.norm(kpts_array[:, :2] - keypoints[:, :2], axis=1)
 
