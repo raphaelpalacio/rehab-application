@@ -59,64 +59,48 @@ class Pose(BaseModel):
     object_name: str
     keypoints: list[list[list[float]]]
 
-@video_router.websocket('/feedback/{object_name}/ws')
+@video_router.post('/feedback')
 async def feedback_websocket(
-    websocket: WebSocket, 
-    object_name: str, 
+    file: UploadFile, 
+    object_name: str = Form(...),
+    frame: int = Form(...),
     user: FBUser = Security(verifier, scopes=['patient'])
 ):
     try:
         with getDictCursor() as cur:
             cur.execute(
-                "SELECT * FROM videos WHERE patient_id = %s AND object_name = %s LIMIT 1;", 
+                "SELECT COUNT(*) AS total_rows FROM videos WHERE patient_id = %s AND object_name = %s;", 
                 (user.uid, object_name)
             )
             result = cur.fetchone()
-            if not result: 
-                await websocket.close(code=1008, reason="Video not found")
-                return
-            
-            video = Video.model_validate(result)
-            
+            if not result or result['total_rows'] == 0: 
+                raise HTTPException(status_code=404, detail="Video not found")
+
+            get_frame = max(frame // 5, result["total_rows"] - 1)
+
             cur.execute(
-                "SELECT * FROM poses WHERE object_name = %s ORDER BY frame_id ASC;",
-                (video.object_name)
+                "SELECT * FROM poses WHERE object_name = %s AND frame_id = %s;",
+                (object_name, get_frame)
             )
-            
-            poses = [Pose.model_validate(pose) for pose in cur.fetchall()]
-            
-            if len(poses) == 0:
-                await websocket.close(code=1008, reason="No poses found for this video")
-                return
-            
-            await websocket.accept()
-            
-    except Exception as e:
-        await websocket.close(code=1008, reason="An error occurred: " + str(e))
-        return
-    
-    while True:
-        try:
-            frame = int(await websocket.receive_text())
-            image = await websocket.receive_bytes()
 
-            with NamedTemporaryFile(suffix=".jpg") as tmp:
-                tmp.write(image)
-                tmp.flush()
-                results = model.track(source=tmp.name)
-                print(results)
+            tmp = cur.fetchone()
             
+            if (not tmp): return 0.0
+            
+            pose = Pose.model_validate(tmp)
+            logger.info(f"Downloaded poses for {object_name} - video frame {get_frame}")
+
+        with NamedTemporaryFile(suffix=".jpg") as tmp:
+            tmp.write(await file.read())
+            tmp.flush()
+            results = model.track(source=tmp.name)
             kpts_array = results[0].keypoints.data.cpu().numpy().tolist()
-            compare_to = poses[frame].keypoints
-            
-            print(kpts_array, compare_to)
+            keypoints = pose.keypoints
 
-        except WebSocketDisconnect:
-            return
-        except Exception as e:
-            logger.error("Error in feedback_websocket: %s", e)
-            await websocket.close(code=1008, reason="An error occurred: " + str(e))
-            return
+        print(kpts_array, keypoints)
+    except Exception as e:
+        logger.error("Error %s:", e)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @video_router.post('/snapshot', status_code=200)
 async def upload_snapshot(

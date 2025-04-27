@@ -56,8 +56,8 @@ const CameraScreen = () => {
     }, [frame]);
 
     useEffect(() => {
+        const user = auth().currentUser;
         const fetchRole = async () => {
-            const user = auth().currentUser;
             if (user) {
                 const decodedToken = await user.getIdTokenResult();
                 const fetchedToken = await user.getIdToken();
@@ -69,7 +69,7 @@ const CameraScreen = () => {
                 }
             }
         };
-
+        
         fetchRole();
     }, []);
 
@@ -78,7 +78,7 @@ const CameraScreen = () => {
 
         const sendPhoto = async (formData: FormData) => {
             try {
-                const res = await fetch(`${API_URL}/video/snapshot`, {
+                const res = await fetch(`${API_URL}/video/feedback`, {
                     method: "POST",
                     body: formData,
                     headers: {
@@ -94,17 +94,18 @@ const CameraScreen = () => {
         const interval = setInterval(() => {
             ref.current?.takeSnapshot()
                 .then((snapshot) => {
-                    // const formData = new FormData();
-                    // const filename = snapshot.path.split("/").pop();
-                    // formData.append("file", {
-                    //     uri: `file://${snapshot.path}`,
-                    //     name: filename,
-                    //     type: "image/jpeg",
-                    // } as any);
+                    const formData = new FormData();
+                    const filename = snapshot.path.split("/").pop();
+                    formData.append("file", {
+                        uri: `file://${snapshot.path}`,
+                        name: filename,
+                        type: "image/jpeg",
+                    } as any);
 
-                    // sendPhoto(formData);
-                    // console.log(snapshot);
-                    console.log(frame.value);
+                    formData.append('object_name', videoObjectName)
+                    formData.append('frame', frame.value.toString());
+
+                    sendPhoto(formData);
                 })
                 .catch((e) => console.log(e));
         }, 500);
