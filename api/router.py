@@ -94,7 +94,7 @@ async def feedback_websocket(
             tmp.write(await file.read())
             tmp.flush()
             results = model.track(source=tmp.name)
-            kpts_array = results[0].keypoints.data.cpu().numpy()[0]
+            kpts_array = results[0].keypoints.data.cpu().numpy()
             keypoints = np.array(pose.keypoints)
 
         dists = np.linalg.norm(kpts_array[:, :2] - keypoints[:, :2], axis=1)
