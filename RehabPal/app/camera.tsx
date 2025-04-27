@@ -16,7 +16,7 @@ import {
     Modal,
     TextInput,
 } from "react-native";
-import { Video, ResizeMode } from "expo-av";
+import { Video, ResizeMode, AVPlaybackStatus } from "expo-av";
 import Constants from "expo-constants";
 import { useSelector } from "react-redux";
 import { RootState } from "../slices/store";
@@ -300,11 +300,15 @@ const CameraScreen = () => {
                         style={StyleSheet.absoluteFill}
                         resizeMode={ResizeMode.COVER}
                         shouldPlay
-                        isLooping
-                        onLoad={() => {
-                            console.log("hello");
-                            frame.value = 0;
-                        }}
+                        isLooping = {false}
+                        onPlaybackStatusUpdate={(status: AVPlaybackStatus) => {
+                            if (!status.isLoaded) return
+                        
+                            const { positionMillis, durationMillis, isPlaying } = status
+                            if (durationMillis && positionMillis >= durationMillis - 50 && !isPlaying) {
+                                stopVideo()
+                            }
+                          }}
                     />
                 )}
                 <View style={styles.buttonContainer}>
