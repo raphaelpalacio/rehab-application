@@ -65,7 +65,7 @@ const CameraScreen = () => {
                 setToken(fetchedToken);
 
                 if (decodedToken.claims.role == 'patient') {
-                    downloadDoctorVideo(videoObjectName)
+                    downloadDoctorVideo(videoObjectName, fetchedToken)
                 }
             }
         };
@@ -131,7 +131,7 @@ const CameraScreen = () => {
         );
     }
 
-    const downloadDoctorVideo = async (videoObjectName: string) => {
+    const downloadDoctorVideo = async (videoObjectName: string, token: string) => {
         const doctorVideoURL = `${API_URL}/video/download/${videoObjectName}`;
         if (FileSystem.cacheDirectory) {
             const localUri = FileSystem.cacheDirectory + videoObjectName.split("/").pop();
@@ -285,6 +285,15 @@ const CameraScreen = () => {
     const renderCamera = () => {
         return (
             <View style={styles.container}>
+                <Camera
+                    style={styles.camera}
+                    device={device!}
+                    ref={ref}
+                    audio={true}
+                    video={true}
+                    frameProcessor={frameProcessor}
+                    isActive
+                />
                 {doctorVideoUri && role === "patient" && recording && (
                     <Video
                         source={{ uri: doctorVideoUri }}
@@ -298,16 +307,6 @@ const CameraScreen = () => {
                         }}
                     />
                 )}
-                <Camera
-                    style={styles.camera}
-                    device={device!}
-                    ref={ref}
-                    audio={true}
-                    video={true}
-                    frameProcessor={frameProcessor}
-                    isActive
-                />
-
                 <View style={styles.buttonContainer}>
                     <TouchableOpacity
                         style={styles.shutterButton}
