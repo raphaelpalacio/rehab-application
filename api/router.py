@@ -105,7 +105,7 @@ async def feedback_websocket(
                 tmp.flush()
                 results = model.track(source=tmp.name)
                 print(results)
-
+            
             kpts_array = results[0].keypoints.data.cpu().numpy().tolist()
             compare_to = poses[frame].keypoints
             
@@ -126,52 +126,68 @@ async def upload_snapshot(
     This is used to upload a snapshot file so we can store it. Must be sent as a multipart/form-data request
     and the file must be of type quicktime (used for mov)
     """
-    
+
     if file is None:
         raise BadRequestException("No file provided in the request.")
 
     if file.content_type not in ["image/jpeg", "image/png"]:
         raise BadRequestException(f"Invalid file type: {file.content_type}. Expected 'image/jpeg' or 'image/png'.")
-
+    
+    object_name = f"snapshots/{file.filename}"
     res = minio_client.put_object(
         bucket_name=settings.bucket_name,
-        object_name=f"snapshots/{file.filename}",
+        object_name=object_name,
         data=file.file,
         length=file.size,
         content_type=file.content_type
     )
-    
+
     if res is None or res.object_name is None:
         raise HTTPException(status_code=500, detail="Failed to upload video to MinIO")
-    
+
     return {"message": "Snapshot uploaded successfully"}
 
-async def pose_estimation (file: UploadFile = File(...)):
-    if file is None:
-        raise BadRequestException("No file provided in the request.")
+async def pose_estimation (object_name: str, content_type: str):
+    try:
+        file = minio_client.get_object(
+            bucket_name=settings.bucket_name,
+            object_name=object_name,
+        )
 
-    if file.content_type not in ALLOWED_MIME:
-        raise HTTPException(status_code=415, detail="Unsupported media type")
+        suffix = ".mp4" if (content_type == 'video/mp4') else ".mov"
+        with getDictCursor() as cur:
+            with NamedTemporaryFile(suffix=suffix) as tmp:
+                tmp.write(file.read())
+                tmp.flush()
+                results = model.track(source = tmp.name, stream = True)
 
-    with NamedTemporaryFile(suffix=".mp4") as tmp:
-        shutil.copyfileobj(file.file, tmp) # this streams the bytes :)
-        print(tmp)
-        results = model.track(source = tmp.name, stream = True)
-        object_name = f"videos/{file.filename}"
+                # We want to enumerate every 5 frames
+                # This is because we want to reduce the number of frames we are storing
+                for frame_id, res in enumerate(results):
+                    if frame_id % 5 != 0:
+                        continue
 
-        for frame_id, res in enumerate(results):
-            kpts_array = res.keypoints.data.cpu().numpy()  
-            keypoints: list[list[list[float]]] = kpts_array.tolist()
+                    kpts_array = res.keypoints.data.cpu().numpy()  
+                    if kpts_array.size == 0:
+                        continue
 
-            with getDictCursor() as cur:
-                cur.execute(
-                    """
-                    INSERT INTO poses (frame_id, object_name, keypoints)
-                    VALUES (%s, %s, %s);
-                    """,
-                    (frame_id, object_name, keypoints)
-                )
-                conn.commit()   
+                    keypoints: list[list[list[float]]] = kpts_array.tolist()
+
+                    cur.execute(
+                        """
+                        INSERT INTO poses (frame_id, object_name, keypoints)
+                        VALUES (%s, %s, %s::double precision[][][]);
+                        """,
+                        (frame_id, object_name, keypoints)
+                    )
+
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        logger.error("Error in pose_estimation: %s", e)
+    finally:
+        file.close()
+        file.release_conn()
 
 @video_router.post("/upload", status_code=201, response_model=Video)
 async def upload_video(
@@ -184,32 +200,34 @@ async def upload_video(
     This is used to upload a video file so we can store it. Must be sent as a multipart/form-data request
     and the file must be of type quicktime (used for mov)
     """
-    
+
     if file is None:
         raise BadRequestException("No file provided in the request.")
 
     if file.content_type not in ["video/quicktime", "video/mp4"]:
         raise BadRequestException(f"Invalid file type: {file.content_type}. Expected 'video/quicktime'.")
 
+    object_name = f"videos/{file.filename}"
     res = minio_client.put_object(
         bucket_name=settings.bucket_name,
-        object_name=f"videos/{file.filename}",
+        object_name=object_name,
         data=file.file,
         length=file.size,
         content_type=file.content_type
     )
-    
+
     if res is None or res.object_name is None:
         raise HTTPException(status_code=500, detail="Failed to upload video to MinIO")
-    
+
     if user.role == 'doctor':
         if not patient_id or not title:
             raise HTTPException(status_code=400, detail="Patient ID and title are required for doctors")
-        return await handle_doctor_video(res, file, patient_id, title, user)
+        return await handle_doctor_video(res, object_name, file.content_type, patient_id, title, user)
 
 async def handle_doctor_video(
     res: ObjectWriteResult,
-    file: UploadFile,
+    object_name: str,
+    content_type: str,
     patient_id: str,
     title: str,
     user: FBUser
@@ -225,7 +243,7 @@ async def handle_doctor_video(
                     INSERT INTO videos (creator, doctor_id, patient_id, title, object_name, content_type)
                     VALUES (%s, %s, %s, %s, %s, %s) RETURNING *;
                 """,
-                (user.uid, user.uid, patient_id, title, res.object_name, file.content_type)
+                (user.uid, user.uid, patient_id, title, res.object_name, content_type)
             )
             
             result = cur.fetchone()
@@ -236,12 +254,12 @@ async def handle_doctor_video(
             video = Video.model_validate(result)
             conn.commit()
 
-            asyncio.create_task(pose_estimation(file))
+            asyncio.create_task(pose_estimation(object_name, content_type))
             
             return video
     except Exception as e:
         conn.rollback()
-        logger.error("Error in upload_video: %e", e)
+        logger.error("Error in handle_doctor_video: %e", e)
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
@@ -308,7 +326,7 @@ async def download_video(object_name: str, user: FBUser = Security(verifier, sco
     except Exception as e:
         logger.error("Error in download_video: %s", e)
         raise HTTPException(status_code=500, detail="An error occurred")
-                
+
 class Role(BaseModel):
     role: Literal["doctor", "patient"]
 
@@ -450,7 +468,7 @@ async def get_connect_code(user: FBUser = Security(verifier, scopes=default_scop
 #         with conn.cursor() as cur:
 #             cur.execute("UPDATE patients SET doctor_id = NULL;")
 #             cur.execute("UPDATE doctors SET patients = ARRAY[]::text[];")
-            
+
 #             conn.commit()
 #             return {"message": "Database reset successful"}
 

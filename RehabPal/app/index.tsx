@@ -10,7 +10,7 @@ export default function LandingPage() {
   function onAuthStateChanged(user: FirebaseAuthTypes.User | null) {
     if (!user) return;
     
-    user.getIdTokenResult().then(res => {
+    user.getIdTokenResult(true).then(res => {
       const role: 'doctor' | 'patient' | null = res.claims.role;
       if (role) {
         router.push(`/${role}`);
