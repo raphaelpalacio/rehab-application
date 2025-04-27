@@ -23,8 +23,7 @@ import { RootState } from "../src/store";
 import auth from "@react-native-firebase/auth";
 import { useLocalSearchParams } from "expo-router";
 import * as FileSystem from "expo-file-system";
-import ViewShot from "react-native-view-shot";
-
+import { Worklets } from "react-native-worklets-core";
 const API_URL = Constants.expoConfig?.extra?.API_URL;
 
 const CameraScreen = () => {
@@ -48,11 +47,13 @@ const CameraScreen = () => {
     const [token, setToken] = useState<string | null>(null);
     const [doctorVideoUri, setDoctorVideoUri] = useState<string | null>(null);
     const [frame, setFrame] = useState(0);
-    const frameCounter = useFrameProcessor(f => {
-        'worklet'
+    const incrementFrame = Worklets.createRunOnJS(() => {
+        setFrame(f => f + 1);
+    });
 
-        // We want to set the frame every second 
-        setFrame(prev => prev + 1);
+    const frameProcessor = useFrameProcessor((f) => {
+        "worklet";
+        incrementFrame();
     }, []);
 
     useEffect(() => {
@@ -328,7 +329,7 @@ const CameraScreen = () => {
                     ref={ref}
                     audio={true}
                     video={true}
-                    frameProcessor={frameCounter}
+                    frameProcessor={frameProcessor}
                     isActive
                 />
 
