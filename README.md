@@ -1,5 +1,3 @@
-# Secret LA Hacks
-
 ## Configurations
 
 1. Require firebase-adminsdk.json in root level folder
